@@ -302,9 +302,15 @@
                                 <h3 class="font-bold text-slate-800 text-lg">Daftar Vendor</h3>
                                 <p class="text-xs text-slate-500">Kelola informasi supplier sparepart dan layanan</p>
                             </div>
-                            <button onclick="openModal('vendor')" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100">
-                                <i class="fa-solid fa-plus"></i> Tambah Vendor
-                            </button>
+                            <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                <div class="relative">
+                                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                    <input type="text" id="search-vendor" oninput="renderVendors()" class="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                                </div>
+                                <button onclick="openModal('vendor')" class="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
+                                    <i class="fa-solid fa-plus"></i> Tambah Vendor
+                                </button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
@@ -334,9 +340,15 @@
                                 <h3 class="font-bold text-slate-800 text-lg">Master Armada</h3>
                                 <p class="text-xs text-slate-500">Registrasi unit kendaraan SN Cargo</p>
                             </div>
-                            <button onclick="openModal('master-armada')" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100">
-                                <i class="fa-solid fa-plus"></i> Registrasi Unit
-                            </button>
+                            <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                <div class="relative">
+                                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                    <input type="text" id="search-armada" oninput="renderMasterArmada()" class="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                                </div>
+                                <button onclick="openModal('master-armada')" class="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
+                                    <i class="fa-solid fa-plus"></i> Registrasi Unit
+                                </button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
@@ -366,9 +378,15 @@
                                 <h3 class="font-bold text-slate-800 text-lg">Master Sparepart</h3>
                                 <p class="text-xs text-slate-500">Kelola daftar komponen dan harga sparepart</p>
                             </div>
-                            <button onclick="openModal('master-sparepart')" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100">
-                                <i class="fa-solid fa-plus"></i> Tambah Sparepart
-                            </button>
+                            <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                <div class="relative">
+                                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                    <input type="text" id="search-sparepart" oninput="renderMasterSparepart()" class="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                                </div>
+                                <button onclick="openModal('master-sparepart')" class="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
+                                    <i class="fa-solid fa-plus"></i> Tambah Sparepart
+                                </button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
@@ -400,9 +418,15 @@
                                 <h3 class="font-bold text-slate-800 text-lg">Master Transaksi</h3>
                                 <p class="text-xs text-slate-500">Catatan transaksi operasional dan pengadaan</p>
                             </div>
-                            <button onclick="openModal('master-transaksi')" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100">
-                                <i class="fa-solid fa-plus"></i> Tambah Transaksi
-                            </button>
+                            <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                <div class="relative">
+                                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                    <input type="text" id="search-transaksi" oninput="renderMasterTransaksi()" class="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                                </div>
+                                <button onclick="openModal('master-transaksi')" class="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
+                                    <i class="fa-solid fa-plus"></i> Tambah Transaksi
+                                </button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
@@ -571,9 +595,15 @@
                                 <h3 class="font-bold text-slate-800 text-lg">Manajemen User</h3>
                                 <p class="text-xs text-slate-500">Kelola akun dan hak akses sistem</p>
                             </div>
-                            <button onclick="openModal('master-users')" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100">
-                                <i class="fa-solid fa-user-plus"></i> Tambah User
-                            </button>
+                            <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                <div class="relative">
+                                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                    <input type="text" id="search-users" oninput="renderMasterUsers()" class="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                                </div>
+                                <button onclick="openModal('master-users')" class="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
+                                    <i class="fa-solid fa-user-plus"></i> Tambah User
+                                </button>
+                            </div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
@@ -1626,7 +1656,10 @@
         function renderMasterUsers() {
             const tbody = document.getElementById('master-users-table-body');
             if (!tbody) return;
-            tbody.innerHTML = masterUsers.map(u => `
+            const search = document.getElementById('search-users') ? document.getElementById('search-users').value.toLowerCase() : '';
+            const filtered = masterUsers.filter(u => u.username.toLowerCase().includes(search) || u.name.toLowerCase().includes(search) || u.role.toLowerCase().includes(search));
+            
+            tbody.innerHTML = filtered.map(u => `
                 <tr class="hover:bg-slate-50 transition-colors text-xs">
                     <td class="px-6 py-3 font-bold text-slate-800">${u.username}</td>
                     <td class="px-6 py-3 font-medium">${u.name}</td>
@@ -1645,7 +1678,9 @@
         function renderVendors() {
             const tbody = document.getElementById('vendor-table-body');
             if (!tbody) return;
-            tbody.innerHTML = vendors.map(v => `
+            const s = document.getElementById('search-vendor') ? document.getElementById('search-vendor').value.toLowerCase() : '';
+            const filtered = vendors.filter(v => v.kode.toLowerCase().includes(s) || v.nama.toLowerCase().includes(s) || v.pic.toLowerCase().includes(s) || v.alamat.toLowerCase().includes(s));
+            tbody.innerHTML = filtered.map(v => `
                 <tr class="hover:bg-slate-50 transition-colors text-xs">
                     <td class="px-6 py-3 font-bold text-slate-800">${v.kode}</td>
                     <td class="px-6 py-3 font-medium">${v.nama}</td>
@@ -1663,17 +1698,14 @@
         function renderMasterArmada() {
             const tbody = document.getElementById('master-armada-table-body');
             if (!tbody) return;
-            tbody.innerHTML = masterArmada.map(a => {
+            const s = document.getElementById('search-armada') ? document.getElementById('search-armada').value.toLowerCase() : '';
+            const filtered = masterArmada.filter(a => a.kode.toLowerCase().includes(s) || a.nopol.toLowerCase().includes(s) || a.jenis.toLowerCase().includes(s) || (a.divisi && a.divisi.toLowerCase().includes(s)));
+            
+            tbody.innerHTML = filtered.map(a => {
                 let statusColor = 'text-amber-500';
                 let dotColor = 'bg-amber-500';
-                
-                if (a.status === 'Aktif') {
-                    statusColor = 'text-emerald-600';
-                    dotColor = 'bg-emerald-500';
-                } else if (a.status === 'Dalam Perbaikan') {
-                    statusColor = 'text-red-500';
-                    dotColor = 'bg-red-500';
-                }
+                if (a.status === 'Aktif') { statusColor = 'text-emerald-600'; dotColor = 'bg-emerald-500'; }
+                else if (a.status === 'Dalam Perbaikan') { statusColor = 'text-red-500'; dotColor = 'bg-red-500'; }
 
                 return `
                     <tr class="hover:bg-slate-50 transition-colors text-xs">
@@ -1719,7 +1751,10 @@
         function renderMasterSparepart() {
             const tbody = document.getElementById('master-sparepart-table-body');
             if (!tbody) return;
-            tbody.innerHTML = masterSpareparts.map(s => `
+            const search = document.getElementById('search-sparepart') ? document.getElementById('search-sparepart').value.toLowerCase() : '';
+            const filtered = masterSpareparts.filter(s => s.kode.toLowerCase().includes(search) || s.nama.toLowerCase().includes(search) || (s.merk && s.merk.toLowerCase().includes(search)) || s.vendor.toLowerCase().includes(search) || s.type.toLowerCase().includes(search));
+            
+            tbody.innerHTML = filtered.map(s => `
                 <tr class="hover:bg-slate-50 transition-colors text-xs">
                     <td class="px-6 py-3 font-bold text-slate-800">${s.kode}</td>
                     <td class="px-6 py-3 font-medium">${s.nama}</td>
@@ -1743,7 +1778,10 @@
         function renderMasterTransaksi() {
             const tbody = document.getElementById('master-transaksi-table-body');
             if (!tbody) return;
-            tbody.innerHTML = masterTransactions.map(t => `
+            const search = document.getElementById('search-transaksi') ? document.getElementById('search-transaksi').value.toLowerCase() : '';
+            const filtered = masterTransactions.filter(t => t.kode.toLowerCase().includes(search) || t.nopol.toLowerCase().includes(search) || (t.nama_sparepart && t.nama_sparepart.toLowerCase().includes(search)) || t.po_no.toLowerCase().includes(search) || t.vendor.toLowerCase().includes(search));
+            
+            tbody.innerHTML = filtered.map(t => `
                 <tr class="hover:bg-slate-50 transition-colors text-xs">
                     <td class="px-6 py-3 font-bold text-slate-800">${t.kode}</td>
                     <td class="px-6 py-3">
