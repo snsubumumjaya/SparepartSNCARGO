@@ -56,6 +56,12 @@
             border-radius: 10px;
         }
 
+        @media print {
+            .no-print { display: none !important; }
+            main#main-content { margin-left: 0 !important; }
+            aside#sidebar { display: none !important; }
+        }
+
         /* Collapsed Sidebar Styles */
         aside#sidebar.collapsed {
             width: 80px !important;
@@ -129,7 +135,7 @@
 
     <div id="main-app" class="flex h-screen overflow-hidden opacity-0">
         <!-- Sidebar -->
-        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-[rgb(175,238,239)] border-r border-slate-300/30 transition-all duration-300 transform lg:translate-x-0 shadow-xl lg:shadow-none">
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-[rgb(175,238,239)] border-r border-slate-300/30 transition-all duration-300 transform lg:translate-x-0 shadow-xl lg:shadow-none no-print">
             <div class="flex flex-col h-full">
                 <!-- Logo -->
                 <div class="p-6 flex items-center gap-3 overflow-hidden border-b border-white/5 shrink-0">
@@ -198,7 +204,7 @@
         <!-- Main Content Area -->
         <main id="main-content" class="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 lg:ml-64">
             <!-- Header -->
-            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-8 shrink-0">
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-8 shrink-0 no-print">
                 <div class="flex items-center gap-4">
                     <button onclick="toggleSidebar()" class="text-slate-500 hover:text-emerald-600 p-2 rounded-lg hover:bg-slate-100 transition-colors">
                         <i class="fa-solid fa-bars-staggered text-xl"></i>
@@ -509,7 +515,7 @@
                                     </tbody>
                                     <tfoot class="bg-slate-50/50">
                                         <tr class="font-bold">
-                                            <td colspan="4" class="px-6 py-4 text-right text-slate-500 text-xs">TOTAL PENGELUARAN:</td>
+                                            <td colspan="6" class="px-6 py-4 text-right text-slate-500 text-xs uppercase">Total Pengeluaran:</td>
                                             <td class="px-6 py-4 text-right text-emerald-600 text-lg" id="history-total-cost">Rp 0</td>
                                             <td></td>
                                         </tr>
@@ -767,10 +773,10 @@
                                 </select>
                             </div>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Harga (Rp)</label>
-                            <input type="number" id="s_harga" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
-                        </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Harga (Rp)</label>
+                                <input type="text" id="s_harga" required oninput="formatCurrencyInput(this)" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                            </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Keterangan</label>
                             <textarea id="s_keterangan" rows="2" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"></textarea>
@@ -852,7 +858,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Harga (Rp)</label>
-                                <input type="number" id="t_harga" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                                <input type="text" id="t_harga" required oninput="formatCurrencyInput(this)" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Divisi</label>
@@ -930,7 +936,12 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
-                        <input type="password" id="user_pass" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                        <div class="relative">
+                            <input type="password" id="user_pass" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                            <button type="button" onclick="toggleUserPassword()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                <i id="user-pass-icon" class="fa-solid fa-eye-slash text-xs"></i>
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Role Akses</label>
@@ -1338,7 +1349,7 @@
                 
                 // Find merk from master spareparts
                 const spRef = masterSpareparts.find(s => s.nama === t.nama_sparepart && s.vendor === t.vendor);
-                const merk = spRef ? spRef.merk : '-';
+                const merk = spRef ? (spRef.merk || '-') : '-';
 
                 return `
                     <tr class="hover:bg-slate-50 transition-colors">
@@ -1539,6 +1550,19 @@
             }
         };
 
+        window.formatCurrencyInput = function(input) {
+            let value = input.value.replace(/[^0-9]/g, '');
+            if (value) {
+                input.value = new Number(value).toLocaleString('id-ID');
+            } else {
+                input.value = '';
+            }
+        };
+
+        window.parseCurrencyValue = function(string) {
+            return parseFloat(string.replace(/\./g, '')) || 0;
+        };
+
         window.handleTrsAutoPrice = function() {
             const spName = document.getElementById('t_sparepart').value;
             const vendorName = document.getElementById('t_vendor').value;
@@ -1547,10 +1571,8 @@
             if (spName && vendorName) {
                 const sp = masterSpareparts.find(s => s.nama === spName && s.vendor === vendorName);
                 if (sp) {
-                    priceInput.value = sp.harga;
+                    priceInput.value = sp.harga.toLocaleString('id-ID');
                 } else {
-                    // Look for sparepart from ANY vendor as fallback? No, the prompt says "dari nama sparepart dan nama vendor"
-                    // Maybe check if this sparepart exists at all and alert or just clear?
                     priceInput.value = '';
                 }
             }
@@ -1565,6 +1587,26 @@
             }
             const form = document.getElementById('form-' + type);
             if (form) form.reset();
+            
+            // Reset password field to hidden type
+            if (type === 'master-users') {
+                const passInput = document.getElementById('user_pass');
+                if (passInput) passInput.type = 'password';
+                const icon = document.getElementById('user-pass-icon');
+                if (icon) icon.className = 'fa-solid fa-eye-slash text-xs';
+            }
+        };
+
+        window.toggleUserPassword = function() {
+            const passInput = document.getElementById('user_pass');
+            const icon = document.getElementById('user-pass-icon');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                icon.className = 'fa-solid fa-eye text-xs';
+            } else {
+                passInput.type = 'password';
+                icon.className = 'fa-solid fa-eye-slash text-xs';
+            }
         };
 
         function handleNopolChange(nopol) {
@@ -1637,7 +1679,7 @@
             document.getElementById('t_po_tgl').value = t.po_tgl;
             document.getElementById('t_vendor').value = t.vendor;
             document.getElementById('t_kategori').value = t.kategori;
-            document.getElementById('t_harga').value = t.harga;
+            document.getElementById('t_harga').value = (parseFloat(t.harga) || 0).toLocaleString('id-ID');
             document.getElementById('t_divisi').value = t.divisi;
             document.getElementById('t_keterangan').value = t.keterangan;
             document.querySelector('#modal-master-transaksi h3').innerText = 'Edit Transaksi';
@@ -1746,7 +1788,7 @@
             document.getElementById('s_merk').value = s.merk || '';
             document.getElementById('s_type').value = s.type;
             document.getElementById('s_kualitas').value = s.kualitas;
-            document.getElementById('s_harga').value = s.harga;
+            document.getElementById('s_harga').value = (parseFloat(s.harga) || 0).toLocaleString('id-ID');
             document.getElementById('s_keterangan').value = s.keterangan;
             
             // Re-label title to "Edit"
@@ -1855,7 +1897,7 @@
             const kode = document.getElementById('s_kode').value;
             const nama = document.getElementById('s_nama').value;
             const vendor = document.getElementById('s_vendor').value;
-            const baruHarga = parseFloat(document.getElementById('s_harga').value);
+            const baruHarga = parseCurrencyValue(document.getElementById('s_harga').value);
             
             const existing = masterSpareparts.find(s => s.kode === kode);
             
@@ -1901,7 +1943,7 @@
                 po_tgl: document.getElementById('t_po_tgl').value,
                 vendor: document.getElementById('t_vendor').value,
                 kategori: document.getElementById('t_kategori').value,
-                harga: document.getElementById('t_harga').value,
+                harga: parseCurrencyValue(document.getElementById('t_harga').value),
                 divisi: document.getElementById('t_divisi').value,
                 keterangan: document.getElementById('t_keterangan').value
             };
