@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SN Cargo Umum - Sparepart Management</title>
+    <title>SN Cargo Umum - Fleet & Sparepart Management</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <!-- PDF Generation SDK -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
@@ -46,20 +50,88 @@
             background: #d1d5db;
             border-radius: 10px;
         }
+
+        /* Collapsed Sidebar Styles */
+        aside#sidebar.collapsed {
+            width: 80px !important;
+        }
+        aside#sidebar.collapsed .sidebar-text,
+        aside#sidebar.collapsed .sidebar-label,
+        aside#sidebar.collapsed .user-info,
+        aside#sidebar.collapsed .logout-btn {
+            display: none !important;
+        }
+        aside#sidebar.collapsed .p-6 {
+            padding: 1.5rem 0.5rem !important;
+            justify-content: center !important;
+        }
+        aside#sidebar.collapsed nav {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+        aside#sidebar.collapsed .sidebar-link {
+            justify-content: center !important;
+            padding: 0.75rem 0 !important;
+            width: 50px !important;
+            margin: 0 auto !important;
+        }
+        aside#sidebar.collapsed .sidebar-link i {
+            margin: 0 !important;
+            font-size: 1.25rem !important;
+        }
+        main#main-content.sidebar-collapsed {
+            margin-left: 80px !important;
+        }
     </style>
 </head>
 <body class="text-slate-800 overflow-hidden">
 
-    <div class="flex h-screen overflow-hidden">
+    <!-- Login Screen Overlay -->
+    <div id="login-screen" class="fixed inset-0 z-[100] bg-emerald-600 flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md transform transition-all">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg mx-auto mb-4">
+                    <i class="fa-solid fa-truck-fast text-3xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-900">SN Cargo Umum</h1>
+                <p class="text-slate-500 text-sm mt-1">Sistem Manajemen Armada & Sparepart</p>
+            </div>
+            
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Username</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="login-username" required class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="password" id="login-password" required class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all active:scale-[0.98]">
+                    Masuk ke Sistem
+                </button>
+            </form>
+            <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+                <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">© 2026 SHOFI & VICKY</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" class="flex h-screen overflow-hidden opacity-0">
         <!-- Sidebar -->
-        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:static lg:inset-0">
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transition-all duration-300 transform lg:translate-x-0 shadow-xl lg:shadow-none">
             <div class="flex flex-col h-full">
                 <!-- Logo -->
-                <div class="p-6 flex items-center gap-3">
-                    <div class="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
+                <div class="p-6 flex items-center gap-3 overflow-hidden">
+                    <div class="shrink-0 w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
                         <i class="fa-solid fa-truck-fast text-lg"></i>
                     </div>
-                    <div>
+                    <div class="sidebar-text">
                         <h1 class="text-lg font-bold text-slate-900 leading-tight">SN Cargo</h1>
                         <p class="text-xs font-semibold text-emerald-600 tracking-wider uppercase">Umum</p>
                     </div>
@@ -67,31 +139,34 @@
 
                 <!-- Navigation -->
                 <nav class="flex-1 px-4 space-y-1 mt-4 overflow-y-auto custom-scrollbar">
-                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 mb-2">Utama</div>
+                    <div class="sidebar-label text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 mb-2">Utama</div>
                     <button onclick="switchTab('dashboard')" class="sidebar-link active w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-xl transition-all hover:bg-emerald-50 text-slate-600 hover:text-emerald-600" id="btn-dashboard">
-                        <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+                        <i class="fa-solid fa-chart-pie w-5 shrink-0"></i> <span class="sidebar-text">Dashboard</span>
                     </button>
 
-                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 mt-6 mb-2">Data Master</div>
+                    <div class="sidebar-label text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 mt-6 mb-2">Data Master</div>
                     <button onclick="switchTab('master-vendor')" class="sidebar-link w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-xl transition-all hover:bg-emerald-50 text-slate-600 hover:text-emerald-600" id="btn-master-vendor">
-                        <i class="fa-solid fa-handshake w-5"></i> Master Vendor
+                        <i class="fa-solid fa-handshake w-5 shrink-0"></i> <span class="sidebar-text">Master Vendor</span>
                     </button>
                     <button onclick="switchTab('master-armada')" class="sidebar-link w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-xl transition-all hover:bg-emerald-50 text-slate-600 hover:text-emerald-600" id="btn-master-armada">
-                        <i class="fa-solid fa-truck-ramp-box w-5"></i> Master Armada
+                        <i class="fa-solid fa-truck-ramp-box w-5 shrink-0"></i> <span class="sidebar-text">Master Armada</span>
                     </button>
                     <button onclick="switchTab('master-sparepart')" class="sidebar-link w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-xl transition-all hover:bg-emerald-50 text-slate-600 hover:text-emerald-600" id="btn-master-sparepart">
-                        <i class="fa-solid fa-box-open w-5"></i> Master Sparepart
+                        <i class="fa-solid fa-box-open w-5 shrink-0"></i> <span class="sidebar-text">Master Sparepart</span>
                     </button>
                     <button onclick="switchTab('master-transaksi')" class="sidebar-link w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-xl transition-all hover:bg-emerald-50 text-slate-600 hover:text-emerald-600" id="btn-master-transaksi">
-                        <i class="fa-solid fa-file-invoice-dollar w-5"></i> Master Transaksi
+                        <i class="fa-solid fa-file-invoice-dollar w-5 shrink-0"></i> <span class="sidebar-text">Master Transaksi</span>
+                    </button>
+                    <button onclick="switchTab('master-users')" class="sidebar-link w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-xl transition-all hover:bg-emerald-50 text-slate-600 hover:text-emerald-600" id="btn-master-users">
+                        <i class="fa-solid fa-users-gear w-5 shrink-0"></i> <span class="sidebar-text">Manajemen User</span>
                     </button>
 
-                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 mt-6 mb-2">Laporan</div>
+                    <div class="sidebar-label text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 mt-6 mb-2">Laporan</div>
                     <button onclick="switchTab('histori-pembelian')" class="sidebar-link w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-xl transition-all hover:bg-emerald-50 text-slate-600 hover:text-emerald-600" id="btn-histori-pembelian">
-                        <i class="fa-solid fa-clock-rotate-left w-5"></i> Histori Pembelian
+                        <i class="fa-solid fa-clock-rotate-left w-5 shrink-0"></i> <span class="sidebar-text">Histori Pembelian</span>
                     </button>
                     <button onclick="switchTab('pembanding-harga')" class="sidebar-link w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-xl transition-all hover:bg-emerald-50 text-slate-600 hover:text-emerald-600" id="btn-pembanding-harga">
-                        <i class="fa-solid fa-scale-balanced w-5"></i> Pembanding Harga
+                        <i class="fa-solid fa-scale-balanced w-5 shrink-0"></i> <span class="sidebar-text">Pembanding Harga</span>
                     </button>
 
 
@@ -99,15 +174,15 @@
 
                 <!-- Profile Small -->
                 <div class="p-4 border-t border-slate-100">
-                    <div class="flex items-center gap-3 p-2 rounded-xl bg-slate-50">
-                        <div class="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">
-                            AD
+                    <div class="flex items-center gap-3 p-2 rounded-xl bg-slate-50 overflow-hidden">
+                        <div id="user-avatar" class="shrink-0 w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold uppercase">
+                            -
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-slate-900 truncate">Admin SN</p>
-                            <p class="text-xs text-slate-500 truncate">Logistic Manager</p>
+                        <div class="flex-1 min-w-0 user-info">
+                            <p id="user-display-name" class="text-sm font-semibold text-slate-900 truncate">-</p>
+                            <p id="user-display-role" class="text-[10px] font-bold text-emerald-600 uppercase tracking-tight truncate">-</p>
                         </div>
-                        <button class="text-slate-400 hover:text-red-500 transition-colors">
+                        <button onclick="handleLogout()" class="logout-btn text-slate-400 hover:text-red-500 transition-colors">
                             <i class="fa-solid fa-right-from-bracket text-sm"></i>
                         </button>
                     </div>
@@ -116,11 +191,11 @@
         </aside>
 
         <!-- Main Content Area -->
-        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <main id="main-content" class="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 lg:ml-64">
             <!-- Header -->
             <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-8 shrink-0">
                 <div class="flex items-center gap-4">
-                    <button onclick="toggleSidebar()" class="lg:hidden text-slate-500 hover:text-emerald-600 p-2 rounded-lg hover:bg-slate-100">
+                    <button onclick="toggleSidebar()" class="text-slate-500 hover:text-emerald-600 p-2 rounded-lg hover:bg-slate-100 transition-colors">
                         <i class="fa-solid fa-bars-staggered text-xl"></i>
                     </button>
                     <h2 id="page-title" class="text-xl font-bold text-slate-800">Dashboard</h2>
@@ -188,9 +263,8 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                            <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                            <div class="p-6 border-b border-slate-100">
                                 <h3 class="font-bold text-slate-800">Aktivitas Transaksi Terkini</h3>
-                                <button onclick="switchTab('master-transaksi')" class="text-emerald-600 text-sm font-semibold hover:underline">Lihat Semua</button>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left">
@@ -213,9 +287,7 @@
                             <div class="space-y-4" id="dashboard-vendor-list">
                                 <!-- Dynamic Vendor List -->
                             </div>
-                            <button onclick="switchTab('master-vendor')" class="w-full mt-8 py-3 bg-emerald-50 text-emerald-600 font-bold rounded-xl hover:bg-emerald-100 transition-colors text-sm">
-                                Kelola Vendor
-                            </button>
+
                         </div>
                     </div>
                 </div>
@@ -383,15 +455,19 @@
                                     <h3 class="font-bold text-slate-800" id="history-unit-title">Riwayat Unit: B 1234 ABC</h3>
                                     <p class="text-xs text-slate-500" id="history-unit-subtitle">Total 0 Transaksi Ditemukan</p>
                                 </div>
-                                <button onclick="window.print()" class="p-2 text-slate-500 hover:text-emerald-600 transition-colors">
-                                    <i class="fa-solid fa-print"></i>
-                                </button>
+                                <div class="flex gap-2">
+                                    <button onclick="downloadHistoryPDF()" class="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-600 hover:text-white transition-all">
+                                        <i class="fa-solid fa-file-pdf"></i> Download PDF
+                                    </button>
+                                </div>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left">
                                     <thead class="bg-slate-50 text-slate-500 text-[10px] uppercase tracking-wider font-bold">
                                         <tr>
                                             <th class="px-6 py-4">Tanggal</th>
+                                            <th class="px-6 py-4">Sparepart</th>
+                                            <th class="px-6 py-4">Merk</th>
                                             <th class="px-6 py-4">No. PO-MO</th>
                                             <th class="px-6 py-4">Vendor</th>
                                             <th class="px-6 py-4">Kategori</th>
@@ -451,7 +527,12 @@
                                     <h3 class="font-bold text-slate-800">Perbandingan Harga Vendor</h3>
                                     <p class="text-xs text-slate-500 italic" id="compare-item-subtitle"></p>
                                 </div>
-                                <span class="px-3 py-1 bg-white rounded-full border border-blue-100 text-blue-600 text-[10px] font-bold shadow-sm">Termurah Teratas</span>
+                                <div class="flex gap-2">
+                                    <button onclick="downloadComparePDF()" class="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-600 hover:text-white transition-all">
+                                        <i class="fa-solid fa-file-pdf"></i> Download PDF
+                                    </button>
+                                    <span class="px-3 py-1 bg-white rounded-full border border-blue-100 text-blue-600 text-[10px] font-bold shadow-sm self-center">Termurah Teratas</span>
+                                </div>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left">
@@ -479,6 +560,36 @@
                     <div id="compare-empty-state" class="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center">
                         <i class="fa-solid fa-layer-group text-6xl text-slate-200 mb-6"></i>
                         <p class="text-slate-400 font-medium">Silakan pilih sparepart untuk membandingkan harga.</p>
+                    </div>
+                </div>
+
+                <!-- Manajemen User Tab -->
+                <div id="tab-master-users" class="tab-content hidden">
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="p-6 flex flex-col sm:flex-row justify-between items-center border-b border-slate-100 gap-4">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-lg">Manajemen User</h3>
+                                <p class="text-xs text-slate-500">Kelola akun dan hak akses sistem</p>
+                            </div>
+                            <button onclick="openModal('master-users')" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100">
+                                <i class="fa-solid fa-user-plus"></i> Tambah User
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead class="bg-slate-50 text-slate-500 text-[10px] uppercase tracking-wider font-bold">
+                                    <tr>
+                                        <th class="px-6 py-4">Username</th>
+                                        <th class="px-6 py-4">Nama Lengkap</th>
+                                        <th class="px-6 py-4">Role</th>
+                                        <th class="px-6 py-4 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="master-users-table-body" class="divide-y divide-slate-100 text-sm">
+                                    <!-- User Data -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -557,6 +668,14 @@
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Divisi</label>
                                 <input type="text" id="a_divisi" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
                             </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Status Armada</label>
+                            <select id="a_status" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
+                                <option value="Aktif">Aktif</option>
+                                <option value="Dalam Perbaikan">Dalam Perbaikan</option>
+                                <option value="Tidak Aktif">Tidak Aktif</option>
+                            </select>
                         </div>
                         <div class="flex justify-end gap-3 mt-6">
                             <button type="button" onclick="closeModal('master-armada')" class="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">Batal</button>
@@ -759,6 +878,41 @@
         </div>
     </div>
 
+    <!-- Modal Manajemen User -->
+    <div id="modal-master-users" class="fixed inset-0 z-[60] hidden items-center justify-center p-4">
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeModal('master-users')"></div>
+        <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg w-full">
+            <div class="p-6">
+                <h3 class="text-lg font-bold text-slate-900 mb-4">Tambah User Baru</h3>
+                <form id="form-master-users" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Username</label>
+                        <input type="text" id="user_username" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Lengkap</label>
+                        <input type="text" id="user_name" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
+                        <input type="password" id="user_pass" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Role Akses</label>
+                        <select id="user_role" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
+                            <option value="admin">Administrator</option>
+                            <option value="user">User Laporan</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end gap-3 mt-6">
+                        <button type="button" onclick="closeModal('master-users')" class="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">Batal</button>
+                        <button type="submit" class="px-6 py-2 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-colors">Simpan User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Script Section -->
     <script>
         // Firebase Configuration
@@ -782,6 +936,88 @@
         let masterSpareparts = [];
         let masterTransactions = [];
         let priceChangeLogs = [];
+        let masterUsers = [];
+        let currentUser = null;
+
+        // Login Logic
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const u = document.getElementById('login-username').value;
+            const p = document.getElementById('login-password').value;
+
+            // Check against Firebase Users
+            const userMatch = masterUsers.find(user => user.username === u && user.pass === p);
+
+            if (userMatch) {
+                handleLoginSuccess(u, userMatch);
+            } else {
+                alert('Username atau password salah!');
+            }
+        });
+
+        function handleLoginSuccess(username, userData) {
+            currentUser = { username, ...userData };
+            localStorage.setItem('sn_cargo_session', JSON.stringify(currentUser));
+            
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('opacity-0');
+            
+            // Set profile data
+            document.getElementById('user-avatar').innerText = username.substring(0, 2);
+            document.getElementById('user-display-name').innerText = userData.name;
+            document.getElementById('user-display-role').innerText = userData.role === 'admin' ? 'Administrator' : 'User Laporan';
+            
+            applyRolePermissions();
+            
+            // Auto switch to appropriate tab
+            switchTab('dashboard');
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('sn_cargo_session');
+            window.location.reload();
+        }
+
+        function applyRolePermissions() {
+            if (!currentUser) return;
+            
+            const isAdmin = currentUser.role === 'admin';
+            
+            // Select sidebar elements
+            const mainSection = document.querySelectorAll('nav > div')[0]; // Utama
+            const dashboardBtn = document.getElementById('btn-dashboard');
+            const masterLabel = document.querySelectorAll('nav > div')[1]; // Data Master label
+            const masterBtns = [
+                document.getElementById('btn-master-vendor'),
+                document.getElementById('btn-master-armada'),
+                document.getElementById('btn-master-sparepart'),
+                document.getElementById('btn-master-transaksi'),
+                document.getElementById('btn-master-users')
+            ];
+
+            // Dashboard and Utama section visible to ALL
+            if(mainSection) mainSection.style.display = 'block';
+            if(dashboardBtn) dashboardBtn.style.display = 'flex';
+
+            if (!isAdmin) {
+                // Hide Master for regular User
+                if(masterLabel) masterLabel.style.display = 'none';
+                masterBtns.forEach(btn => { if(btn) btn.style.display = 'none'; });
+            } else {
+                // Show all for Admin
+                if(masterLabel) masterLabel.style.display = 'block';
+                masterBtns.forEach(btn => { if(btn) btn.style.display = 'flex'; });
+            }
+        }
+
+        // Check Session on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            const session = localStorage.getItem('sn_cargo_session');
+            if (session) {
+                const data = JSON.parse(session);
+                handleLoginSuccess(data.username, data);
+            }
+        });
 
         // Dashboard Stats Updater
         function updateDashboardStats() {
@@ -794,7 +1030,9 @@
                     document.getElementById('stat-sparepart-total').innerText = `${masterSpareparts.length} Item`;
                     const totalTransactionValue = masterTransactions.reduce((acc, curr) => acc + (parseFloat(curr.harga) || 0), 0);
                     document.getElementById('stat-transaksi-total').innerText = `Rp ${totalTransactionValue.toLocaleString('id-ID')}`;
-                    const inService = masterArmada.filter(a => a.status !== 'Aktif').length;
+                    
+                    // Specific count for "Dalam Perbaikan"
+                    const inService = masterArmada.filter(a => a.status === 'Dalam Perbaikan').length;
                     document.getElementById('stat-service-total').innerText = `${inService} Unit`;
                     document.getElementById('stat-service-pct').innerText = inService > 0 ? 'Perlu Atensi' : 'Semua Siap';
                 }
@@ -867,14 +1105,40 @@
             priceChangeLogs = data ? Object.values(data).filter(i => i) : [];
         });
 
+        db.ref('users').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (!data) {
+                const defAdmin = { username: 'admin', pass: 'admin123', name: 'Super Admin', role: 'admin' };
+                db.ref('users/admin').set(defAdmin);
+                masterUsers = [defAdmin];
+            } else {
+                masterUsers = Object.values(data).filter(i => i);
+            }
+            if (typeof renderMasterUsers === 'function') renderMasterUsers();
+        });
+
         // Update Current Date
         const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', dateOptions);
 
-        // Sidebar Toggle for Mobile
+        // Sidebar Toggle (Mobile & Desktop)
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('-translate-x-full');
+            const mainContent = document.getElementById('main-content');
+            
+            if (window.innerWidth >= 1024) {
+                // Desktop Toggle: Collapse/Expand
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('sidebar-collapsed');
+                // Ensure translate is removed on desktop
+                sidebar.classList.remove('-translate-x-full');
+            } else {
+                // Mobile Toggle: Show/Hide
+                sidebar.classList.toggle('-translate-x-full');
+                // Ensure collapsed mode is off on mobile
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('sidebar-collapsed');
+            }
         }
 
         // Tab Switcher Logic
@@ -885,6 +1149,7 @@
                 'master-armada': 'Master Armada',
                 'master-sparepart': 'Master Sparepart',
                 'master-transaksi': 'Master Transaksi',
+                'master-users': 'Manajemen User',
                 'histori-pembelian': 'Histori Pembelian Sparepart',
                 'pembanding-harga': 'Pembanding Harga Sparepart'
             };
@@ -906,6 +1171,7 @@
             if (tabName === 'master-armada') renderMasterArmada();
             if (tabName === 'master-sparepart') renderMasterSparepart();
             if (tabName === 'master-transaksi') renderMasterTransaksi();
+            if (tabName === 'master-users') renderMasterUsers();
             if (tabName === 'histori-pembelian') prepareHistoryFilter();
             if (tabName === 'pembanding-harga') preparePriceComparison();
         }
@@ -1033,31 +1299,144 @@
 
             let totalCost = 0;
             tbody.innerHTML = filteredData.map(t => {
-                totalCost += parseFloat(t.harga);
+                totalCost += (parseFloat(t.harga) || 0);
+                
+                // Find merk from master spareparts
+                const spRef = masterSpareparts.find(s => s.nama === t.nama_sparepart && s.vendor === t.vendor);
+                const merk = spRef ? spRef.merk : '-';
+
                 return `
                     <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="px-6 py-4 text-slate-600 font-medium">${new Date(t.po_tgl).toLocaleDateString('id-ID')}</td>
-                        <td class="px-6 py-4 font-bold text-slate-800">${t.po_no}</td>
-                        <td class="px-6 py-4 text-xs font-semibold text-slate-700">${t.vendor}</td>
+                        <td class="px-6 py-4 text-slate-600 font-medium text-[10px]">${new Date(t.po_tgl).toLocaleDateString('id-ID')}</td>
+                        <td class="px-6 py-4 font-bold text-indigo-600 text-[10px]">${t.nama_sparepart || '-'}</td>
+                        <td class="px-6 py-4 text-slate-500 text-[10px]">${merk}</td>
+                        <td class="px-6 py-4 font-bold text-slate-800 text-[10px]">${t.po_no}</td>
+                        <td class="px-6 py-4 text-[10px] font-semibold text-slate-700">${t.vendor}</td>
                         <td class="px-6 py-4">
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${t.kategori === 'Toko' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'} uppercase">
+                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${t.kategori === 'Toko' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'} uppercase">
                                 ${t.kategori}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-right font-mono font-bold text-emerald-600">
-                            Rp ${new Number(t.harga).toLocaleString('id-ID')}
+                        <td class="px-6 py-4 text-right font-mono font-bold text-emerald-600 text-[10px]">
+                            Rp ${(parseFloat(t.harga) || 0).toLocaleString('id-ID')}
                         </td>
-                        <td class="px-6 py-4 text-slate-500 text-xs">${t.keterangan || '-'}</td>
+                        <td class="px-6 py-4 text-slate-500 text-[10px] truncate max-w-[150px]">${t.keterangan || '-'}</td>
                     </tr>
                 `;
             }).join('');
 
             if (filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center text-slate-400">Belum ada data transaksi untuk armada ini.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-12 text-center text-slate-400">Belum ada data transaksi untuk armada ini.</td></tr>`;
             }
 
             document.getElementById('history-total-cost').innerText = `Rp ${totalCost.toLocaleString('id-ID')}`;
         }
+
+        window.downloadHistoryPDF = function() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape');
+            const nopol = document.getElementById('history-nopol-filter').value;
+            
+            if (!nopol) return alert('Silakan pilih unit armada terlebih dahulu.');
+
+            const filteredData = masterTransactions.filter(t => t.nopol === nopol);
+            
+            // Header
+            doc.setFontSize(18);
+            doc.setTextColor(16, 185, 129); // Emerald 500
+            doc.text('SN CARGO UMUM', 14, 20);
+            
+            doc.setFontSize(11);
+            doc.setTextColor(100);
+            doc.text('LAPORAN RIWAYAT PEMBELIAN SPAREPART', 14, 28);
+            doc.text(`Unit Armada: ${nopol}`, 14, 35);
+            doc.text(`Tanggal Cetak: ${new Date().toLocaleString('id-ID')}`, 14, 42);
+
+            const tableData = filteredData.map(t => {
+                const spRef = masterSpareparts.find(s => s.nama === t.nama_sparepart && s.vendor === t.vendor);
+                const merk = spRef ? spRef.merk : '-';
+                return [
+                    new Date(t.po_tgl).toLocaleDateString('id-ID'),
+                    t.nama_sparepart || '-',
+                    merk,
+                    t.po_no,
+                    t.vendor,
+                    t.kategori,
+                    `Rp ${ (parseFloat(t.harga) || 0).toLocaleString('id-ID')}`,
+                    t.keterangan || '-'
+                ];
+            });
+
+            doc.autoTable({
+                startY: 50,
+                head: [['Tanggal', 'Sparepart', 'Merk', 'No. PO-MO', 'Vendor', 'Kategori', 'Harga', 'Keterangan']],
+                body: tableData,
+                theme: 'striped',
+                headStyles: { fillColor: [16, 185, 129] },
+                styles: { fontSize: 9 },
+                columnStyles: {
+                    6: { halign: 'right' }
+                },
+                foot: [[
+                    { content: 'TOTAL PENGELUARAN', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: document.getElementById('history-total-cost').innerText, styles: { halign: 'right', fontStyle: 'bold' } },
+                    ''
+                ]]
+            });
+
+            doc.save(`Riwayat_${nopol}_${new Date().getTime()}.pdf`);
+        };
+
+        window.downloadComparePDF = function() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('portrait');
+            const spName = document.getElementById('compare-sparepart-filter').value;
+            
+            if (!spName) return alert('Silakan pilih sparepart terlebih dahulu.');
+
+            const currentStock = masterSpareparts
+                .filter(s => s.nama === spName)
+                .sort((a, b) => a.harga - b.harga);
+            
+            // Header
+            doc.setFontSize(18);
+            doc.setTextColor(16, 185, 129); // Emerald 500
+            doc.text('SN CARGO UMUM', 14, 20);
+            
+            doc.setFontSize(11);
+            doc.setTextColor(100);
+            doc.text('LAPORAN PERBANDINGAN HARGA SPAREPART', 14, 28);
+            doc.text(`Item: ${spName}`, 14, 35);
+            doc.text(`Tanggal Cetak: ${new Date().toLocaleString('id-ID')}`, 14, 42);
+
+            const minPrice = currentStock.length > 0 ? currentStock[0].harga : 0;
+
+            const tableData = currentStock.map((s, index) => {
+                const diff = s.harga - minPrice;
+                return [
+                    s.vendor,
+                    s.merk || '-',
+                    s.type || '-',
+                    s.kualitas,
+                    `Rp ${new Number(s.harga).toLocaleString('id-ID')}`,
+                    diff === 0 ? 'HARGA TERBAIK' : `+ Rp ${diff.toLocaleString('id-ID')}`
+                ];
+            });
+
+            doc.autoTable({
+                startY: 50,
+                head: [['Vendor', 'Merk', 'Tipe', 'Kualitas', 'Harga Unit', 'Selisih']],
+                body: tableData,
+                theme: 'striped',
+                headStyles: { fillColor: [59, 130, 246] }, // Blue 500 for compare
+                styles: { fontSize: 9 },
+                columnStyles: {
+                    4: { halign: 'right' }
+                }
+            });
+
+            doc.save(`Perbandingan_${spName}_${new Date().getTime()}.pdf`);
+        };
 
         // Modal Functions
         window.openModal = function(type) {
@@ -1119,6 +1498,9 @@
                     vendorSelect.innerHTML = '<option value="">Pilih Vendor</option>' + 
                         vendors.map(v => `<option value="${v.nama}">${v.nama}</option>`).join('');
                 }
+            } else if (type === 'master-users') {
+                document.getElementById('user_username').readOnly = false;
+                document.getElementById('user_username').classList.remove('bg-slate-100');
             }
         };
 
@@ -1172,7 +1554,8 @@
                 'vendor': 'vendors',
                 'armada': 'armada',
                 'sparepart': 'spareparts',
-                'transaksi': 'transactions'
+                'transaksi': 'transactions',
+                'user': 'users'
             };
             
             const path = pathMap[type];
@@ -1203,6 +1586,7 @@
             document.getElementById('a_nopol').value = a.nopol;
             document.getElementById('a_jenis').value = a.jenis;
             document.getElementById('a_divisi').value = a.divisi || '';
+            document.getElementById('a_status').value = a.status || 'Aktif';
             document.querySelector('#modal-master-armada h3').innerText = 'Edit Unit Armada';
         };
 
@@ -1224,7 +1608,40 @@
             document.querySelector('#modal-master-transaksi h3').innerText = 'Edit Transaksi';
         };
 
+        window.editUser = function(username) {
+            const u = masterUsers.find(x => x.username === username);
+            if (!u) return;
+            openModal('master-users');
+            const unInput = document.getElementById('user_username');
+            unInput.value = u.username;
+            unInput.readOnly = true;
+            unInput.classList.add('bg-slate-100');
+            document.getElementById('user_name').value = u.name;
+            document.getElementById('user_pass').value = u.pass;
+            document.getElementById('user_role').value = u.role;
+            document.querySelector('#modal-master-users h3').innerText = 'Edit User';
+        };
+
         // Render Functions
+        function renderMasterUsers() {
+            const tbody = document.getElementById('master-users-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = masterUsers.map(u => `
+                <tr class="hover:bg-slate-50 transition-colors text-xs">
+                    <td class="px-6 py-3 font-bold text-slate-800">${u.username}</td>
+                    <td class="px-6 py-3 font-medium">${u.name}</td>
+                    <td class="px-6 py-3">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'} uppercase">
+                            ${u.role === 'admin' ? 'Administrator' : 'User Laporan'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-3 text-right flex justify-end gap-2">
+                        <button onclick="editUser('${u.username}')" class="text-blue-400 hover:text-blue-600 transition-colors p-1"><i class="fa-solid fa-user-pen"></i></button>
+                        ${u.username !== currentUser.username ? `<button onclick="deleteData('user', '${u.username}')" class="text-red-400 hover:text-red-600 transition-colors p-1"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
         function renderVendors() {
             const tbody = document.getElementById('vendor-table-body');
             if (!tbody) return;
@@ -1246,26 +1663,39 @@
         function renderMasterArmada() {
             const tbody = document.getElementById('master-armada-table-body');
             if (!tbody) return;
-            tbody.innerHTML = masterArmada.map(a => `
-                <tr class="hover:bg-slate-50 transition-colors text-xs">
-                    <td class="px-6 py-3 font-bold text-slate-800">${a.kode}</td>
-                    <td class="px-6 py-3 font-mono font-bold">${a.nopol}</td>
-                    <td class="px-6 py-3">
-                        <span class="px-2 py-1 rounded-lg bg-slate-100 text-slate-700 font-semibold">${a.jenis}</span>
-                    </td>
-                    <td class="px-6 py-3 text-slate-500 font-medium">${a.divisi || '-'}</td>
-                    <td class="px-6 py-3">
-                        <span class="flex items-center gap-1.5 font-bold ${a.status === 'Aktif' ? 'text-emerald-600' : 'text-amber-500'}">
-                            <span class="w-1.5 h-1.5 rounded-full ${a.status === 'Aktif' ? 'bg-emerald-500' : 'bg-amber-500'}"></span>
-                            ${a.status}
-                        </span>
-                    </td>
-                    <td class="px-6 py-3 text-right flex justify-end gap-2">
-                        <button onclick="editArmada('${a.kode}')" class="text-blue-400 hover:text-blue-600 transition-colors p-1"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="deleteData('armada', '${a.kode}')" class="text-red-400 hover:text-red-600 transition-colors p-1"><i class="fa-solid fa-trash-can"></i></button>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = masterArmada.map(a => {
+                let statusColor = 'text-amber-500';
+                let dotColor = 'bg-amber-500';
+                
+                if (a.status === 'Aktif') {
+                    statusColor = 'text-emerald-600';
+                    dotColor = 'bg-emerald-500';
+                } else if (a.status === 'Dalam Perbaikan') {
+                    statusColor = 'text-red-500';
+                    dotColor = 'bg-red-500';
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors text-xs">
+                        <td class="px-6 py-3 font-bold text-slate-800">${a.kode}</td>
+                        <td class="px-6 py-3 font-mono font-bold">${a.nopol}</td>
+                        <td class="px-6 py-3">
+                            <span class="px-2 py-1 rounded-lg bg-slate-100 text-slate-700 font-semibold">${a.jenis}</span>
+                        </td>
+                        <td class="px-6 py-3 text-slate-500 font-medium">${a.divisi || '-'}</td>
+                        <td class="px-6 py-3">
+                            <span class="flex items-center gap-1.5 font-bold ${statusColor}">
+                                <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
+                                ${a.status}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3 text-right flex justify-end gap-2">
+                            <button onclick="editArmada('${a.kode}')" class="text-blue-400 hover:text-blue-600 transition-colors p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteData('armada', '${a.kode}')" class="text-red-400 hover:text-red-600 transition-colors p-1"><i class="fa-solid fa-trash-can"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function editSparepart(kode) {
@@ -1367,7 +1797,7 @@
                 nopol: document.getElementById('a_nopol').value.toUpperCase(),
                 jenis: document.getElementById('a_jenis').value,
                 divisi: document.getElementById('a_divisi').value,
-                status: 'Aktif'
+                status: document.getElementById('a_status').value
             };
             
             db.ref('armada/' + kode.replace('-', '_')).set(newArmada)
@@ -1440,14 +1870,53 @@
                 });
         });
 
+        document.getElementById('form-master-users').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('user_username').value;
+            const userData = {
+                username: username,
+                name: document.getElementById('user_name').value,
+                pass: document.getElementById('user_pass').value,
+                role: document.getElementById('user_role').value
+            };
+
+            db.ref('users/' + username).set(userData)
+                .then(() => {
+                    closeModal('master-users');
+                    alert('User berhasil disimpan!');
+                });
+        });
+
         // Initialize App
         window.addEventListener('resize', () => {
-            if (window.innerWidth >= 1024) {
-                document.getElementById('sidebar').classList.remove('-translate-x-full');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            
+            if (window.innerWidth < 1024) {
+                // Force mobile hidden state on resize to mobile
+                sidebar.classList.add('-translate-x-full');
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('lg:ml-64');
+                mainContent.classList.remove('sidebar-collapsed');
             } else {
-                document.getElementById('sidebar').classList.add('-translate-x-full');
+                // Force desktop visible state on resize to desktop
+                sidebar.classList.remove('-translate-x-full');
+                // Maintain collapsed state if it was set? Let's just default to expanded for simplicity
+                if (!sidebar.classList.contains('collapsed')) {
+                    mainContent.classList.add('lg:ml-64');
+                }
             }
         });
+
+        // Set initial state based on screen size
+        (function initSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            if (window.innerWidth < 1024) {
+                sidebar.classList.add('-translate-x-full');
+                mainContent.classList.remove('lg:ml-64');
+            }
+        })();
 
         // Initial Load
         renderVendors();
