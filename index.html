@@ -27,6 +27,12 @@
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #f8fafc;
+            /* Safe area for mobile browsers */
+            min-height: -webkit-fill-available;
+        }
+        
+        html {
+            height: -webkit-fill-available;
         }
 
         .sidebar-link.active {
@@ -139,7 +145,7 @@
         </div>
     </div>
 
-    <div id="main-app" class="flex h-screen overflow-hidden opacity-0">
+    <div id="main-app" class="flex h-screen h-[100dvh] overflow-hidden opacity-0">
         <!-- Sidebar -->
         <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-[rgb(175,238,239)] border-r border-slate-300/30 transition-all duration-300 transform lg:translate-x-0 shadow-xl lg:shadow-none no-print">
             <div class="flex flex-col h-full">
@@ -230,7 +236,7 @@
             </header>
 
             <!-- Scrollable Content -->
-            <div id="content-container" class="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar">
+            <div id="content-container" class="flex-1 overflow-y-auto p-4 pb-24 lg:p-8 lg:pb-12 custom-scrollbar">
                 
                 <!-- Dashboard Tab -->
                 <div id="tab-dashboard" class="tab-content">
@@ -714,8 +720,8 @@
     <!-- Modal Vendor -->
     <div id="modal-vendor" class="fixed inset-0 z-[60] hidden items-center justify-center p-4">
         <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeModal('vendor')"></div>
-        <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg w-full">
-            <div class="p-6">
+        <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg w-full max-h-[95dvh] flex flex-col">
+            <div class="p-6 overflow-y-auto custom-scrollbar">
                     <h3 class="text-lg font-bold text-slate-900 mb-4">Tambah Vendor Baru</h3>
                     <form id="form-vendor" class="space-y-4" autocomplete="off">
                         <div>
@@ -753,8 +759,8 @@
     <!-- Modal Master Armada -->
     <div id="modal-master-armada" class="fixed inset-0 z-[60] hidden items-center justify-center p-4">
         <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeModal('master-armada')"></div>
-        <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg w-full">
-            <div class="p-6">
+        <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg w-full max-h-[95dvh] flex flex-col">
+            <div class="p-6 overflow-y-auto custom-scrollbar">
                     <h3 class="text-lg font-bold text-slate-900 mb-4">Registrasi Armada Baru</h3>
                     <form id="form-master-armada" class="space-y-4" autocomplete="off">
                         <div class="grid grid-cols-2 gap-4">
@@ -803,8 +809,8 @@
     <!-- Modal Master Sparepart -->
     <div id="modal-master-sparepart" class="fixed inset-0 z-[60] hidden items-center justify-center p-4">
         <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeModal('master-sparepart')"></div>
-        <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg w-full">
-            <div class="p-6">
+        <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg w-full max-h-[95dvh] flex flex-col">
+            <div class="p-6 overflow-y-auto custom-scrollbar">
                     <h3 class="text-lg font-bold text-slate-900 mb-4">Tambah Sparepart Baru</h3>
                     <form id="form-master-sparepart" class="space-y-4" autocomplete="off">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -830,10 +836,10 @@
     <!-- Modal Master Transaksi -->
     <div id="modal-master-transaksi" class="fixed inset-0 z-[60] hidden items-center justify-center p-4">
         <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeModal('master-transaksi')"></div>
-        <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-3xl w-full">
-            <div class="p-6">
+        <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-3xl w-full max-h-[95dvh] flex flex-col">
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
                     <h3 class="text-lg font-bold text-slate-900 mb-4">Input Transaksi Baru</h3>
-                    <form id="form-master-transaksi" class="space-y-4" autocomplete="off">
+                    <form id="form-master-transaksi" class="space-y-4 pb-4" autocomplete="off">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kode Transaksi</label>
@@ -977,8 +983,8 @@
     <!-- Modal Manajemen User -->
     <div id="modal-master-users" class="fixed inset-0 z-[60] hidden items-center justify-center p-4">
         <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeModal('master-users')"></div>
-        <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg w-full">
-            <div class="p-6">
+        <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg w-full max-h-[95dvh] flex flex-col">
+            <div class="p-6 overflow-y-auto custom-scrollbar">
                 <h3 class="text-lg font-bold text-slate-900 mb-4">Tambah User Baru</h3>
                 <form id="form-master-users" class="space-y-4" autocomplete="off">
                     <div>
