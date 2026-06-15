@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SN Cargo Umum - Sparepart Management</title>
+    <title>SN Cargo Umum - Fleet & Sparepart Management</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -11,9 +11,10 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
-    <!-- PDF Generation SDK -->
+    <!-- Export SDKs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
@@ -93,6 +94,11 @@
         main#main-content.sidebar-collapsed {
             margin-left: 80px !important;
         }
+
+        /* Role-based Visibility */
+        body:not(.role-admin) .write-op {
+            display: none !important;
+        }
     </style>
 </head>
 <body class="text-slate-800 overflow-hidden">
@@ -108,7 +114,7 @@
                 <p class="text-slate-500 text-sm mt-1">Sistem Manajemen Armada & Sparepart</p>
             </div>
             
-            <form id="login-form" class="space-y-4">
+            <form id="login-form" class="space-y-4" autocomplete="off">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Username</label>
                     <div class="relative">
@@ -318,7 +324,34 @@
                                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                                     <input type="text" id="search-vendor" oninput="renderVendors()" class="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
                                 </div>
-                                <button onclick="openModal('vendor')" class="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
+                                <div class="flex gap-2">
+                                    <!-- Dropdown Ekspor -->
+                                    <div class="relative">
+                                        <button onclick="toggleExportDropdown(event)" class="h-full px-4 py-2 bg-slate-50 text-slate-600 border border-slate-200 font-bold rounded-xl hover:bg-slate-100 transition-all text-xs flex items-center gap-2">
+                                            <i class="fa-solid fa-file-export"></i> Ekspor <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                                        </button>
+                                        <div id="export-dropdown-menu" class="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl hidden z-[70] overflow-hidden">
+                                            <button onclick="exportVendorXLS(); toggleExportDropdown(event)" class="w-full text-left px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors flex items-center gap-2 border-b border-slate-50">
+                                                <i class="fa-solid fa-file-excel text-blue-500 text-sm"></i> Format Excel (.xls)
+                                            </button>
+                                            <button onclick="exportVendorPDF(); toggleExportDropdown(event)" class="w-full text-left px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors flex items-center gap-2 border-b border-slate-50">
+                                                <i class="fa-solid fa-file-pdf text-red-500 text-sm"></i> Format PDF (.pdf)
+                                            </button>
+                                            <button onclick="exportVendorCSV(); toggleExportDropdown(event)" class="w-full text-left px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors flex items-center gap-2">
+                                                <i class="fa-solid fa-file-csv text-orange-500 text-sm"></i> Format CSV (.csv)
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="h-8 w-[1px] bg-slate-200 mx-1 self-center hidden sm:block"></div>
+                                    
+                                    <!-- Button Import -->
+                                    <input type="file" id="import-vendor-input" class="hidden" accept=".csv" onchange="handleVendorImport(event)">
+                                    <button onclick="document.getElementById('import-vendor-input').click()" class="write-op px-4 py-2 bg-amber-50 text-amber-600 border border-amber-100 font-bold rounded-xl hover:bg-amber-600 hover:text-white transition-all text-xs flex items-center gap-2">
+                                        <i class="fa-solid fa-file-import"></i> Import (.csv)
+                                    </button>
+                                </div>
+                                <button onclick="openModal('vendor')" class="write-op px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
                                     <i class="fa-solid fa-plus"></i> Tambah Vendor
                                 </button>
                             </div>
@@ -332,7 +365,7 @@
                                         <th class="px-6 py-4">PIC</th>
                                         <th class="px-6 py-4">No. Telp</th>
                                         <th class="px-6 py-4">Alamat</th>
-                                        <th class="px-6 py-4"></th>
+                                        <th class="px-6 py-4 write-op"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="vendor-table-body" class="divide-y divide-slate-100 text-sm">
@@ -356,7 +389,31 @@
                                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                                     <input type="text" id="search-armada" oninput="renderMasterArmada()" class="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
                                 </div>
-                                <button onclick="openModal('master-armada')" class="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
+                                <div class="flex gap-2">
+                                    <!-- Dropdown Ekspor Armada -->
+                                    <div class="relative">
+                                        <button onclick="toggleArmadaExportDropdown(event)" class="h-full px-4 py-2 bg-slate-50 text-slate-600 border border-slate-200 font-bold rounded-xl hover:bg-slate-100 transition-all text-xs flex items-center gap-2">
+                                            <i class="fa-solid fa-file-export"></i> Ekspor <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                                        </button>
+                                        <div id="armada-export-dropdown" class="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl hidden z-[70] overflow-hidden">
+                                            <button onclick="exportArmadaXLS(); toggleArmadaExportDropdown(event)" class="w-full text-left px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors flex items-center gap-2 border-b border-slate-50">
+                                                <i class="fa-solid fa-file-excel text-blue-500 text-sm"></i> Format Excel (.xls)
+                                            </button>
+                                            <button onclick="exportArmadaPDF(); toggleArmadaExportDropdown(event)" class="w-full text-left px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors flex items-center gap-2 border-b border-slate-50">
+                                                <i class="fa-solid fa-file-pdf text-red-500 text-sm"></i> Format PDF (.pdf)
+                                            </button>
+                                            <button onclick="exportArmadaCSV(); toggleArmadaExportDropdown(event)" class="w-full text-left px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors flex items-center gap-2">
+                                                <i class="fa-solid fa-file-csv text-orange-500 text-sm"></i> Format CSV (.csv)
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="h-8 w-[1px] bg-slate-200 mx-1 self-center hidden sm:block"></div>
+                                    <input type="file" id="import-armada-input" class="hidden" accept=".csv" onchange="handleArmadaImport(event)">
+                                    <button onclick="document.getElementById('import-armada-input').click()" class="write-op px-4 py-2 bg-amber-50 text-amber-600 border border-amber-100 font-bold rounded-xl hover:bg-amber-600 hover:text-white transition-all text-xs flex items-center gap-2">
+                                        <i class="fa-solid fa-file-import"></i> Import (.csv)
+                                    </button>
+                                </div>
+                                <button onclick="openModal('master-armada')" class="write-op px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
                                     <i class="fa-solid fa-plus"></i> Registrasi Unit
                                 </button>
                             </div>
@@ -370,7 +427,7 @@
                                         <th class="px-6 py-4">Jenis Armada</th>
                                         <th class="px-6 py-4">Divisi</th>
                                         <th class="px-6 py-4">Status</th>
-                                        <th class="px-6 py-4"></th>
+                                        <th class="px-6 py-4 write-op"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="master-armada-table-body" class="divide-y divide-slate-100 text-sm">
@@ -394,7 +451,7 @@
                                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                                     <input type="text" id="search-sparepart" oninput="renderMasterSparepart()" class="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
                                 </div>
-                                <button onclick="openModal('master-sparepart')" class="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
+                                <button onclick="openModal('master-sparepart')" class="write-op px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
                                     <i class="fa-solid fa-plus"></i> Tambah Sparepart
                                 </button>
                             </div>
@@ -405,12 +462,7 @@
                                     <tr>
                                         <th class="px-6 py-4">Kode</th>
                                         <th class="px-6 py-4">Nama Sparepart</th>
-                                        <th class="px-6 py-4">Merk</th>
-                                        <th class="px-6 py-4">Vendor</th>
-                                        <th class="px-6 py-4">Type</th>
-                                        <th class="px-6 py-4">Kualitas</th>
-                                        <th class="px-6 py-4 text-right">Harga</th>
-                                        <th class="px-6 py-4"></th>
+                                        <th class="px-6 py-4 text-right">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody id="master-sparepart-table-body" class="divide-y divide-slate-100 text-sm">
@@ -434,7 +486,7 @@
                                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                                     <input type="text" id="search-transaksi" oninput="renderMasterTransaksi()" class="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
                                 </div>
-                                <button onclick="openModal('master-transaksi')" class="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
+                                <button onclick="openModal('master-transaksi')" class="write-op px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
                                     <i class="fa-solid fa-plus"></i> Tambah Transaksi
                                 </button>
                             </div>
@@ -448,8 +500,9 @@
                                         <th class="px-6 py-4">No. PO-MO</th>
                                         <th class="px-6 py-4">Tgl PO</th>
                                         <th class="px-6 py-4">Vendor</th>
-                                        <th class="px-6 py-4">Kat.</th>
-                                        <th class="px-6 py-4 text-right">Harga</th>
+                                        <th class="px-6 py-4">Kat. / Kualitas</th>
+                                        <th class="px-6 py-4 text-center">Jumlah</th>
+                                        <th class="px-6 py-4 text-right">Total Harga</th>
                                         <th class="px-6 py-4"></th>
                                     </tr>
                                 </thead>
@@ -502,7 +555,8 @@
                                         <tr>
                                             <th class="px-6 py-4">Tanggal</th>
                                             <th class="px-6 py-4">Sparepart</th>
-                                            <th class="px-6 py-4">Merk</th>
+                                            <th class="px-6 py-4">Merek</th>
+                                            <th class="px-6 py-4">Tipe</th>
                                             <th class="px-6 py-4">No. PO-MO</th>
                                             <th class="px-6 py-4">Vendor</th>
                                             <th class="px-6 py-4">Kategori</th>
@@ -515,7 +569,7 @@
                                     </tbody>
                                     <tfoot class="bg-slate-50/50">
                                         <tr class="font-bold">
-                                            <td colspan="6" class="px-6 py-4 text-right text-slate-500 text-xs uppercase">Total Pengeluaran:</td>
+                                            <td colspan="7" class="px-6 py-4 text-right text-slate-500 text-xs uppercase">Total Pengeluaran:</td>
                                             <td class="px-6 py-4 text-right text-emerald-600 text-lg" id="history-total-cost">Rp 0</td>
                                             <td></td>
                                         </tr>
@@ -535,20 +589,37 @@
                 <!-- Pembanding Harga Tab -->
                 <div id="tab-pembanding-harga" class="tab-content hidden">
                     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-8">
-                        <div class="max-w-md mx-auto text-center">
+                        <div class="max-w-4xl mx-auto text-center">
                             <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <i class="fa-solid fa-scale-balanced text-2xl"></i>
                             </div>
                             <h3 class="font-bold text-slate-800 text-lg mb-2">Bandingkan Harga Sparepart</h3>
-                            <p class="text-xs text-slate-500 mb-6">Pilih nama sparepart untuk melihat perbandingan harga antar vendor.</p>
+                            <p class="text-xs text-slate-500 mb-6">Filter berdasarkan Nama Sparepart, Merek, dan Tipe untuk melihat perbandingan harga.</p>
                             
-                            <div class="relative">
-                                <select id="compare-sparepart-filter" onchange="comparePrices(this.value)" class="w-full px-6 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none transition-all">
-                                    <option value="">-- Pilih Sparepart --</option>
-                                    <!-- Populated by JS -->
-                                </select>
-                                <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                    <i class="fa-solid fa-chevron-down"></i>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="relative">
+                                    <select id="compare-sparepart-filter" onchange="prepareCompareFilters(); comparePrices()" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none transition-all">
+                                        <option value="">-- Pilih Sparepart --</option>
+                                    </select>
+                                    <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                        <i class="fa-solid fa-chevron-down"></i>
+                                    </div>
+                                </div>
+                                <div class="relative">
+                                    <select id="compare-merk-filter" onchange="comparePrices()" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none transition-all">
+                                        <option value="">-- Semua Merek --</option>
+                                    </select>
+                                    <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                        <i class="fa-solid fa-chevron-down"></i>
+                                    </div>
+                                </div>
+                                <div class="relative">
+                                    <select id="compare-type-filter" onchange="comparePrices()" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none transition-all">
+                                        <option value="">-- Semua Tipe --</option>
+                                    </select>
+                                    <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                        <i class="fa-solid fa-chevron-down"></i>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -579,6 +650,7 @@
                                             <th class="px-6 py-4">Kualitas</th>
                                             <th class="px-6 py-4">Harga Unit</th>
                                             <th class="px-6 py-4">Selisih</th>
+                                            <th class="px-6 py-4">Tanggal</th>
                                             <th class="px-6 py-4 text-center">Aksi</th>
                                             <th class="px-6 py-4"></th>
                                         </tr>
@@ -611,7 +683,7 @@
                                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                                     <input type="text" id="search-users" oninput="renderMasterUsers()" class="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
                                 </div>
-                                <button onclick="openModal('master-users')" class="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
+                                <button onclick="openModal('master-users')" class="write-op px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
                                     <i class="fa-solid fa-user-plus"></i> Tambah User
                                 </button>
                             </div>
@@ -623,7 +695,7 @@
                                         <th class="px-6 py-4">Username</th>
                                         <th class="px-6 py-4">Nama Lengkap</th>
                                         <th class="px-6 py-4">Role</th>
-                                        <th class="px-6 py-4 text-right">Aksi</th>
+                                        <th class="px-6 py-4 text-right write-op">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody id="master-users-table-body" class="divide-y divide-slate-100 text-sm">
@@ -645,7 +717,7 @@
         <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg w-full">
             <div class="p-6">
                     <h3 class="text-lg font-bold text-slate-900 mb-4">Tambah Vendor Baru</h3>
-                    <form id="form-vendor" class="space-y-4">
+                    <form id="form-vendor" class="space-y-4" autocomplete="off">
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kode Vendor</label>
                             <input type="text" id="v_kode" readonly class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-400 focus:outline-none">
@@ -684,7 +756,7 @@
         <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg w-full">
             <div class="p-6">
                     <h3 class="text-lg font-bold text-slate-900 mb-4">Registrasi Armada Baru</h3>
-                    <form id="form-master-armada" class="space-y-4">
+                    <form id="form-master-armada" class="space-y-4" autocomplete="off">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kode Armada</label>
@@ -734,8 +806,8 @@
         <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg w-full">
             <div class="p-6">
                     <h3 class="text-lg font-bold text-slate-900 mb-4">Tambah Sparepart Baru</h3>
-                    <form id="form-master-sparepart" class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
+                    <form id="form-master-sparepart" class="space-y-4" autocomplete="off">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kode Sparepart</label>
                                 <input type="text" id="s_kode" readonly class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-400 focus:outline-none">
@@ -744,42 +816,6 @@
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Sparepart</label>
                                 <input type="text" id="s_nama" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
                             </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Vendor</label>
-                                <select id="s_vendor" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
-                                    <option value="">Pilih Vendor</option>
-                                    <!-- Options populated by JS -->
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Merk</label>
-                                <input type="text" id="s_merk" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Type</label>
-                                <input type="text" id="s_type" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kualitas</label>
-                                <select id="s_kualitas" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
-                                    <option value="">Pilih Kualitas</option>
-                                    <option value="Original (OEM)">Original (OEM)</option>
-                                    <option value="Aftermarket">Aftermarket</option>
-                                    <option value="KW Super">KW Super</option>
-                                </select>
-                            </div>
-                        </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Harga (Rp)</label>
-                                <input type="text" id="s_harga" required oninput="formatCurrencyInput(this)" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
-                            </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Keterangan</label>
-                            <textarea id="s_keterangan" rows="2" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"></textarea>
                         </div>
                         <div class="flex justify-end gap-3 mt-6">
                             <button type="button" onclick="closeModal('master-sparepart')" class="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">Batal</button>
@@ -797,78 +833,98 @@
         <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-3xl w-full">
             <div class="p-6">
                     <h3 class="text-lg font-bold text-slate-900 mb-4">Input Transaksi Baru</h3>
-                    <form id="form-master-transaksi" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <form id="form-master-transaksi" class="space-y-4" autocomplete="off">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kode Transaksi</label>
-                                <input type="text" id="t_kode" readonly class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-400 focus:outline-none">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kode Transaksi</label>
+                                <input type="text" id="t_kode" readonly class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-400 focus:outline-none">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nomor Polisi</label>
-                                <select id="t_nopol" required onchange="handleNopolChange(this.value)" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">No. PO-MO</label>
+                                <input type="text" id="t_po_no" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tanggal PO-MO</label>
+                                <input type="date" id="t_po_tgl" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nomor Polisi</label>
+                                <select id="t_nopol" required onchange="handleNopolChange(this.value)" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
                                     <option value="">Pilih Armada</option>
-                                    <!-- Options populated by JS -->
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Jenis Armada</label>
-                                <input type="text" id="t_jenis" readonly class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-500 focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Sparepart</label>
-                                <select id="t_sparepart" required onchange="handleTrsAutoPrice()" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
-                                    <option value="">Pilih Sparepart</option>
-                                    <!-- Options populated by JS -->
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">No. PO-MO</label>
-                                <input type="text" id="t_po_no" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tanggal PO-MO</label>
-                                <input type="date" id="t_po_tgl" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Vendor</label>
-                                <select id="t_vendor" required onchange="handleTrsAutoPrice()" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
-                                    <option value="">Pilih Vendor</option>
-                                    <!-- Options populated by JS -->
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kategori</label>
-                                <select id="t_kategori" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
-                                    <option value="">Pilih Kategori</option>
-                                    <option value="Toko">Toko</option>
-                                    <option value="Bengkel">Bengkel</option>
-                                </select>
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Jenis Armada</label>
+                                <input type="text" id="t_jenis" readonly class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-500 focus:outline-none">
                             </div>
                         </div>
 
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-1">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nama Sparepart</label>
+                            <select id="t_sparepart" required onchange="handleTrsAutoPrice()" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
+                                <option value="">Pilih Sparepart</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Merek</label>
+                            <input type="text" id="t_merk" oninput="handleTrsAutoPrice()" onfocus="showAllDatalist(this)" onblur="restoreDatalistValue(this)" list="list-merk" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                            <datalist id="list-merk"></datalist>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tipe</label>
+                            <input type="text" id="t_type" oninput="handleTrsAutoPrice()" onfocus="showAllDatalist(this)" onblur="restoreDatalistValue(this)" list="list-type" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                            <datalist id="list-type"></datalist>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Vendor</label>
+                            <select id="t_vendor" required onchange="handleTrsAutoPrice()" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
+                                <option value="">Pilih Vendor</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kategori</label>
+                            <select id="t_kategori" required onchange="handleTrsAutoPrice()" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
+                                <option value="">Pilih Kategori</option>
+                                <option value="Toko">Toko</option>
+                                <option value="Bengkel">Bengkel</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kualitas</label>
+                            <select id="t_kualitas" required onchange="handleTrsAutoPrice()" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
+                                <option value="">Pilih Kualitas</option>
+                                <option value="Original (OEM)">Original (OEM)</option>
+                                <option value="Aftermarket">Aftermarket</option>
+                                <option value="KW Super">KW Super</option>
+                            </select>
+                        </div>
+                    </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Harga (Rp)</label>
-                                <input type="text" id="t_harga" required oninput="formatCurrencyInput(this)" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Harga Satuan (Rp)</label>
+                                    <span id="t_last_price_date" class="text-[9px] font-bold text-indigo-500 italic"></span>
+                                </div>
+                                <input type="text" id="t_harga" required oninput="formatCurrencyInput(this)" onfocus="showAllDatalist(this)" onblur="restoreDatalistValue(this)" list="list-harga-history" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                                <datalist id="list-harga-history"></datalist>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Divisi</label>
-                                <input type="text" id="t_divisi" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Jumlah</label>
+                                <input type="number" id="t_jumlah" required min="1" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
                             </div>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Keterangan</label>
-                            <textarea id="t_keterangan" rows="2" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"></textarea>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Keterangan</label>
+                            <textarea id="t_keterangan" rows="2" class="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"></textarea>
                         </div>
 
                         <div class="flex justify-end gap-3 mt-6">
@@ -898,16 +954,15 @@
                 
                 <div class="overflow-hidden border border-slate-100 rounded-xl">
                     <table class="w-full text-left">
-                        <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-500">
+                        <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-100">
                             <tr>
-                                <th class="px-4 py-3">Tanggal Perubahan</th>
-                                <th class="px-4 py-3 text-right">Harga Lama</th>
-                                <th class="px-4 py-3 text-right">Harga Baru</th>
-                                <th class="px-4 py-3 text-center">Trend</th>
+                                <th class="px-4 py-3">Tanggal / No PO</th>
+                                <th class="px-4 py-3 text-right">Harga (IDR)</th>
+                                <th class="px-4 py-3 text-center">Selisih vs Terbaru</th>
                             </tr>
                         </thead>
                         <tbody id="vendor-price-logs-body" class="divide-y divide-slate-100 text-xs">
-                            <!-- Logs will be loaded here -->
+                            <!-- Logs loaded dynamically -->
                         </tbody>
                     </table>
                 </div>
@@ -925,7 +980,7 @@
         <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg w-full">
             <div class="p-6">
                 <h3 class="text-lg font-bold text-slate-900 mb-4">Tambah User Baru</h3>
-                <form id="form-master-users" class="space-y-4">
+                <form id="form-master-users" class="space-y-4" autocomplete="off">
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Username</label>
                         <input type="text" id="user_username" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none">
@@ -948,6 +1003,7 @@
                         <select id="user_role" required class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none appearance-none">
                             <option value="admin">Administrator</option>
                             <option value="user">User Laporan</option>
+                            <option value="tamu">Tamu (Read-Only)</option>
                         </select>
                     </div>
                     <div class="flex justify-end gap-3 mt-6">
@@ -955,6 +1011,78 @@
                         <button type="submit" class="px-6 py-2 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-colors">Simpan User</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal View Activity (Master Global) -->
+    <div id="modal-view-activity" class="fixed inset-0 z-[60] hidden items-center justify-center p-4">
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeModal('view-activity')"></div>
+        <div class="relative z-10 bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b border-slate-100">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900" id="view-activity-title">Detail Aktivitas</h3>
+                        <p class="text-xs text-slate-500 mt-1" id="view-activity-subtitle">Informasi riwayat transaksi terdaftar</p>
+                    </div>
+                    <button onclick="closeModal('view-activity')" class="text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                <!-- Filters & Pagination -->
+                <div id="view-activity-filters" class="mt-4 flex flex-wrap items-center gap-4 hidden">
+                    <div class="flex items-center gap-2">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Tampilkan:</label>
+                        <select id="view-activity-limit" onchange="refreshActivityTable()" class="bg-white border border-slate-200 rounded-lg text-[10px] font-bold px-2 py-1 outline-none focus:ring-1 focus:ring-emerald-500">
+                            <option value="ALL" selected>ALL</option>
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                        </select>
+                    </div>
+                    <div id="sparepart-specific-filters" class="flex flex-wrap items-center gap-4 hidden">
+                        <div class="flex items-center gap-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Filter Merek:</label>
+                            <select id="view-activity-filter-merk" onchange="refreshActivityTable()" class="bg-white border border-slate-200 rounded-lg text-[10px] font-bold px-2 py-1 outline-none focus:ring-1 focus:ring-emerald-500">
+                                <option value="">Semua</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase">Filter Tipe:</label>
+                            <select id="view-activity-filter-type" onchange="refreshActivityTable()" class="bg-white border border-slate-200 rounded-lg text-[10px] font-bold px-2 py-1 outline-none focus:ring-1 focus:ring-emerald-500">
+                                <option value="">Semua</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 bg-slate-50/50">
+                <!-- Info Header -->
+                <div id="view-activity-header-info" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <!-- Dynamic Info -->
+                </div>
+                
+                <!-- Table -->
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                    <table class="w-full text-left border-collapse">
+                        <thead id="view-activity-table-head" class="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-100">
+                            <tr>
+                                <th class="px-4 py-3">Tanggal</th>
+                                <th class="px-4 py-3">No. PO-MO</th>
+                                <th class="px-4 py-3">Detail</th>
+                                <th class="px-4 py-3 text-right">Nilai</th>
+                            </tr>
+                        </thead>
+                        <tbody id="view-activity-table-body" class="divide-y divide-slate-100 text-xs">
+                            <!-- Logs will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="p-6 border-t border-slate-100 bg-white flex justify-between items-center">
+                <div class="text-sm font-bold text-slate-700">Total Akumulasi: <span class="text-emerald-600 ml-2" id="view-activity-total">Rp 0</span></div>
+                <button onclick="closeModal('view-activity')" class="px-6 py-2 bg-slate-100 text-slate-600 text-sm font-bold rounded-xl hover:bg-slate-200 transition-colors">Tutup</button>
             </div>
         </div>
     </div>
@@ -1027,33 +1155,51 @@
         function applyRolePermissions() {
             if (!currentUser) return;
             
-            const isAdmin = currentUser.role === 'admin';
+            const role = currentUser.role;
+            const isAdmin = role === 'admin';
+            const isTamu = role === 'tamu';
+            const isUser = role === 'user';
             
             // Select sidebar elements
-            const mainSection = document.querySelectorAll('nav > div')[0]; // Utama
             const dashboardBtn = document.getElementById('btn-dashboard');
-            const masterLabel = document.querySelectorAll('nav > div')[1]; // Data Master label
-            const masterBtns = [
+            const masterLabel = document.querySelector('nav div:nth-of-type(2)');
+            const btnMasterUsers = document.getElementById('btn-master-users');
+            
+            // Global "Tambah" buttons and Action columns hiding for Guest
+            const writeElements = document.querySelectorAll('.write-op');
+            writeElements.forEach(el => {
+                el.style.display = (isAdmin) ? 'flex' : 'none';
+            });
+
+            // Master Data Menu Visibility
+            const masterMenuBtns = [
                 document.getElementById('btn-master-vendor'),
                 document.getElementById('btn-master-armada'),
                 document.getElementById('btn-master-sparepart'),
-                document.getElementById('btn-master-transaksi'),
-                document.getElementById('btn-master-users')
+                document.getElementById('btn-master-transaksi')
             ];
 
-            // Dashboard and Utama section visible to ALL
-            if(mainSection) mainSection.style.display = 'block';
-            if(dashboardBtn) dashboardBtn.style.display = 'flex';
-
-            if (!isAdmin) {
-                // Hide Master for regular User
+            if (isUser) {
+                // User: Only Dashboard & Laporan
                 if(masterLabel) masterLabel.style.display = 'none';
-                masterBtns.forEach(btn => { if(btn) btn.style.display = 'none'; });
-            } else {
-                // Show all for Admin
+                masterMenuBtns.forEach(btn => btn.style.display = 'none');
+                if(btnMasterUsers) btnMasterUsers.style.display = 'none';
+            } else if (isTamu) {
+                // Tamu: See Master Data (Read Only), No Manajemen User
                 if(masterLabel) masterLabel.style.display = 'block';
-                masterBtns.forEach(btn => { if(btn) btn.style.display = 'flex'; });
+                masterMenuBtns.forEach(btn => btn.style.display = 'flex');
+                if(btnMasterUsers) btnMasterUsers.style.display = 'none';
+            } else if (isAdmin) {
+                // Admin: Full Access
+                if(masterLabel) masterLabel.style.display = 'block';
+                masterMenuBtns.forEach(btn => btn.style.display = 'flex');
+                if(btnMasterUsers) btnMasterUsers.style.display = 'flex';
             }
+
+            // Body class for CSS-based hiding of Add buttons
+            document.body.classList.toggle('role-admin', isAdmin);
+            document.body.classList.toggle('role-tamu', isTamu);
+            document.body.classList.toggle('role-user', isUser);
         }
 
         // Check Session on Load
@@ -1223,23 +1369,55 @@
         }
 
         function preparePriceComparison() {
-            const filter = document.getElementById('compare-sparepart-filter');
-            // Unique names for filter
+            const spFilter = document.getElementById('compare-sparepart-filter');
             const uniqueNames = [...new Set(masterSpareparts.map(s => s.nama))];
-            filter.innerHTML = '<option value="">-- Pilih Sparepart --</option>' + 
+            spFilter.innerHTML = '<option value="">-- Pilih Sparepart --</option>' + 
                 uniqueNames.map(name => `<option value="${name}">${name}</option>`).join('');
+            
+            // Clear Merk and Type initially
+            document.getElementById('compare-merk-filter').innerHTML = '<option value="">-- Semua Merek --</option>';
+            document.getElementById('compare-type-filter').innerHTML = '<option value="">-- Semua Tipe --</option>';
             
             document.getElementById('compare-result-container').classList.add('hidden');
             document.getElementById('compare-empty-state').classList.remove('hidden');
         }
 
-        function comparePrices(sparepartName) {
+        window.prepareCompareFilters = function() {
+            const spName = document.getElementById('compare-sparepart-filter').value;
+            const merkFilter = document.getElementById('compare-merk-filter');
+            const typeFilter = document.getElementById('compare-type-filter');
+
+            if (!spName) {
+                merkFilter.innerHTML = '<option value="">-- Semua Merek --</option>';
+                typeFilter.innerHTML = '<option value="">-- Semua Tipe --</option>';
+                return;
+            }
+
+            // Get relevant data from transactions for the selected sparepart
+            const history = masterTransactions.filter(t => t.nama_sparepart === spName);
+            
+            // Populate Merk dropdown
+            const uniqueMerks = [...new Set(history.map(t => t.merk).filter(m => m))];
+            merkFilter.innerHTML = '<option value="">-- Semua Merek --</option>' + 
+                uniqueMerks.map(m => `<option value="${m}">${m}</option>`).join('');
+
+            // Populate Type dropdown
+            const uniqueTypes = [...new Set(history.map(t => t.type).filter(t => t))];
+            typeFilter.innerHTML = '<option value="">-- Semua Tipe --</option>' + 
+                uniqueTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+        };
+
+        window.comparePrices = function() {
+            const spName = document.getElementById('compare-sparepart-filter').value;
+            const merkName = document.getElementById('compare-merk-filter').value;
+            const typeName = document.getElementById('compare-type-filter').value;
+
             const container = document.getElementById('compare-result-container');
             const emptyState = document.getElementById('compare-empty-state');
             const compareBody = document.getElementById('compare-table-body');
             const subtitle = document.getElementById('compare-item-subtitle');
 
-            if (!sparepartName) {
+            if (!spName) {
                 container.classList.add('hidden');
                 emptyState.classList.remove('hidden');
                 return;
@@ -1247,71 +1425,106 @@
 
             container.classList.remove('hidden');
             emptyState.classList.add('hidden');
-            subtitle.innerText = `Menampilkan perbandingan harga untuk: ${sparepartName}`;
+            
+            let displayTitle = `Analisis Harga: ${spName}`;
+            if (merkName) displayTitle += ` | Merek: ${merkName}`;
+            if (typeName) displayTitle += ` | Tipe: ${typeName}`;
+            subtitle.innerText = displayTitle;
 
-            // Current Comparison (Sorted Cheapest)
-            const currentStock = masterSpareparts
-                .filter(s => s.nama === sparepartName)
-                .sort((a, b) => a.harga - b.harga);
+            // Group transactions by Vendor + Merk + Type + Kualitas to get the latest prices
+            const productGroups = {};
 
-            const minPrice = currentStock.length > 0 ? currentStock[0].harga : 0;
+            masterTransactions.filter(t => {
+                let match = (t.nama_sparepart === spName);
+                if (merkName && t.merk !== merkName) match = false;
+                if (typeName && t.type !== typeName) match = false;
+                return match;
+            }).forEach(t => {
+                const key = `${t.vendor}|${t.merk || '-'}|${t.type || '-'}|${t.kualitas || '-'}`;
+                if (!productGroups[key] || new Date(t.po_tgl) > new Date(productGroups[key].po_tgl)) {
+                    productGroups[key] = t;
+                }
+            });
 
-            compareBody.innerHTML = currentStock.map((s, index) => {
-                const diff = s.harga - minPrice;
+            const currentPrices = Object.values(productGroups).sort((a, b) => a.harga - b.harga);
+            const minPrice = currentPrices.length > 0 ? currentPrices[0].harga : 0;
+
+            compareBody.innerHTML = currentPrices.length > 0 ? currentPrices.map((p, index) => {
+                const diff = (parseFloat(p.harga) || 0) - minPrice;
                 return `
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="px-6 py-4">
-                            <div class="font-bold text-slate-800">${s.vendor}</div>
+                            <div class="font-bold text-slate-800">${p.vendor}</div>
                         </td>
-                        <td class="px-6 py-4 text-xs font-medium text-slate-600">${s.merk || '-'}</td>
-                        <td class="px-6 py-4 text-xs text-slate-500">${s.type || '-'}</td>
+                        <td class="px-6 py-4 text-xs font-medium text-slate-600">${p.merk || '-'}</td>
+                        <td class="px-6 py-4 text-xs text-slate-500">${p.type || '-'}</td>
                         <td class="px-6 py-4">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">${s.kualitas}</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">${p.kualitas || '-'}</span>
                         </td>
-                        <td class="px-6 py-4 font-mono font-bold text-slate-900">Rp ${new Number(s.harga).toLocaleString('id-ID')}</td>
+                        <td class="px-6 py-4 font-mono font-bold text-slate-900">Rp ${new Number(p.harga).toLocaleString('id-ID')}</td>
                         <td class="px-6 py-4 text-xs font-semibold ${diff === 0 ? 'text-emerald-600' : 'text-red-500'}">
-                            ${diff === 0 ? '<span class="text-[10px]">HARGA TERBAIK</span>' : '+ Rp ' + diff.toLocaleString('id-ID')}
+                            ${diff === 0 ? '<span class="text-[10px] bg-emerald-50 px-2 py-1 rounded">TERMURAH</span>' : '+ Rp ' + diff.toLocaleString('id-ID')}
+                        </td>
+                        <td class="px-6 py-4 text-[10px] text-slate-500 font-medium">
+                            ${new Date(p.po_tgl).toLocaleDateString('id-ID')}
                         </td>
                         <td class="px-6 py-4 text-center">
-                            <button onclick="showVendorPriceHistory('${s.nama}', '${s.vendor}')" class="px-3 py-1.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg border border-blue-100 hover:bg-blue-600 hover:text-white transition-all">
+                            <button onclick="showVendorPriceHistory('${p.nama_sparepart}', '${p.vendor}', '${p.merk || ''}', '${p.type || ''}')" class="px-3 py-1.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg border border-blue-100 hover:bg-blue-600 hover:text-white transition-all">
                                 <i class="fa-solid fa-clock-rotate-left mr-1"></i> Riwayat
                             </button>
                         </td>
                         <td class="px-6 py-4">
-                            ${index === 0 ? '<i class="fa-solid fa-circle-check text-emerald-500"></i>' : ''}
+                            ${index === 0 ? '<i class="fa-solid fa-circle-check text-emerald-500 text-lg"></i>' : ''}
                         </td>
                     </tr>
                 `;
-            }).join('');
-        }
+            }).join('') : '<tr><td colspan="9" class="px-6 py-12 text-center text-slate-400 italic">Belum ada riwayat transaksi yang cocok dengan kriteria filter.</td></tr>';
+        };
 
-        window.showVendorPriceHistory = function(spName, vendorName) {
+        window.showVendorPriceHistory = function(spName, vendorName, merk, type) {
             openModal('price-history');
-            document.getElementById('history-modal-subtitle').innerText = `Item: ${spName} | Vendor: ${vendorName}`;
+            document.getElementById('history-modal-subtitle').innerText = `Item: ${spName} (${merk} - ${type}) | Vendor: ${vendorName}`;
             
-            const logs = priceChangeLogs
-                .filter(l => l.nama === spName && l.vendor === vendorName)
-                .sort((a, b) => new Date(b.waktu) - new Date(a.waktu));
+            // Get all actual transactions for this specific item from this vendor
+            const transactions = masterTransactions
+                .filter(t => t.nama_sparepart === spName && t.vendor === vendorName && t.merk === merk && t.type === type)
+                .sort((a, b) => new Date(b.po_tgl) - new Date(a.po_tgl));
 
             const tbody = document.getElementById('vendor-price-logs-body');
-            tbody.innerHTML = logs.length > 0 ? logs.map(l => {
-                const isDown = l.baru < l.lama;
-                const isUp = l.baru > l.lama;
-                const diffPct = l.lama > 0 ? ((l.baru - l.lama) / l.lama * 100).toFixed(1) : 0;
+            
+            if (transactions.length > 0) {
+                const latestPrice = parseFloat(transactions[0].harga) || 0;
                 
-                return `
-                    <tr>
-                        <td class="px-4 py-3 text-slate-500">${new Date(l.waktu).toLocaleString('id-ID')}</td>
-                        <td class="px-4 py-3 text-right font-mono text-slate-400 italic">Rp ${l.lama.toLocaleString('id-ID')}</td>
-                        <td class="px-4 py-3 text-right font-mono font-bold text-slate-800">Rp ${l.baru.toLocaleString('id-ID')}</td>
-                        <td class="px-4 py-3 text-center">
-                            ${isDown ? `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-arrow-down"></i> ${diffPct}%</span>` : ''}
-                            ${isUp ? `<span class="text-red-600 font-bold"><i class="fa-solid fa-arrow-up"></i> +${diffPct}%</span>` : ''}
-                            ${!isUp && !isDown ? '-' : ''}
-                        </td>
-                    </tr>
-                `;
-            }).join('') : '<tr><td colspan="4" class="px-4 py-8 text-center text-slate-400 italic">Belum ada riwayat perubahan harga untuk vendor ini.</td></tr>';
+                tbody.innerHTML = transactions.map((t, index) => {
+                    const currentPrice = parseFloat(t.harga) || 0;
+                    const diff = currentPrice - latestPrice;
+                    const isLatest = index === 0;
+
+                    return `
+                        <tr class="${isLatest ? 'bg-emerald-50/30' : ''}">
+                            <td class="px-4 py-3">
+                                <div class="font-medium text-slate-700">${new Date(t.po_tgl).toLocaleDateString('id-ID')}</div>
+                                <div class="text-[9px] text-slate-400 uppercase">${t.po_no}</div>
+                            </td>
+                            <td class="px-4 py-3 text-right font-mono font-bold text-slate-800">
+                                Rp ${currentPrice.toLocaleString('id-ID')}
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                ${isLatest ? 
+                                    '<span class="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full uppercase">Harga Terbaru</span>' : 
+                                    (diff < 0 ? 
+                                        `<span class="text-emerald-600 font-bold">- Rp ${Math.abs(diff).toLocaleString('id-ID')}</span>` : 
+                                        (diff > 0 ? `<span class="text-red-600 font-bold">+ Rp ${diff.toLocaleString('id-ID')}</span>` : 
+                                        '<span class="text-slate-400">Sama</span>')
+                                    )
+                                }
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-12 text-center text-slate-400 italic">Belum ada riwayat transaksi ditemukan.</td></tr>';
+            }
         };
 
         function prepareHistoryFilter() {
@@ -1345,17 +1558,17 @@
 
             let totalCost = 0;
             tbody.innerHTML = filteredData.map(t => {
-                totalCost += (parseFloat(t.harga) || 0);
+                totalCost += (parseFloat(t.harga) || 0) * (parseInt(t.jumlah) || 1);
                 
-                // Find merk from master spareparts
-                const spRef = masterSpareparts.find(s => s.nama === t.nama_sparepart && s.vendor === t.vendor);
-                const merk = spRef ? (spRef.merk || '-') : '-';
+                const merek = t.merk || '-';
+                const tipe = t.type || '-';
 
                 return `
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="px-6 py-4 text-slate-600 font-medium text-[10px]">${new Date(t.po_tgl).toLocaleDateString('id-ID')}</td>
                         <td class="px-6 py-4 font-bold text-indigo-600 text-[10px]">${t.nama_sparepart || '-'}</td>
-                        <td class="px-6 py-4 text-slate-500 text-[10px]">${merk}</td>
+                        <td class="px-6 py-4 text-slate-500 text-[10px]">${merek}</td>
+                        <td class="px-6 py-4 text-slate-500 text-[10px]">${tipe}</td>
                         <td class="px-6 py-4 font-bold text-slate-800 text-[10px]">${t.po_no}</td>
                         <td class="px-6 py-4 text-[10px] font-semibold text-slate-700">${t.vendor}</td>
                         <td class="px-6 py-4">
@@ -1372,7 +1585,7 @@
             }).join('');
 
             if (filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-12 text-center text-slate-400">Belum ada data transaksi untuk armada ini.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="px-6 py-12 text-center text-slate-400">Belum ada data transaksi untuk armada ini.</td></tr>`;
             }
 
             document.getElementById('history-total-cost').innerText = `Rp ${totalCost.toLocaleString('id-ID')}`;
@@ -1399,12 +1612,11 @@
             doc.text(`Tanggal Cetak: ${new Date().toLocaleString('id-ID')}`, 14, 42);
 
             const tableData = filteredData.map(t => {
-                const spRef = masterSpareparts.find(s => s.nama === t.nama_sparepart && s.vendor === t.vendor);
-                const merk = spRef ? spRef.merk : '-';
                 return [
                     new Date(t.po_tgl).toLocaleDateString('id-ID'),
                     t.nama_sparepart || '-',
-                    merk,
+                    t.merk || '-',
+                    t.type || '-',
                     t.po_no,
                     t.vendor,
                     t.kategori,
@@ -1415,16 +1627,16 @@
 
             doc.autoTable({
                 startY: 50,
-                head: [['Tanggal', 'Sparepart', 'Merk', 'No. PO-MO', 'Vendor', 'Kategori', 'Harga', 'Keterangan']],
+                head: [['Tanggal', 'Sparepart', 'Merek', 'Tipe', 'No. PO-MO', 'Vendor', 'Kategori', 'Harga', 'Keterangan']],
                 body: tableData,
                 theme: 'striped',
                 headStyles: { fillColor: [16, 185, 129] },
-                styles: { fontSize: 9 },
+                styles: { fontSize: 8 },
                 columnStyles: {
-                    6: { halign: 'right' }
+                    7: { halign: 'right' }
                 },
                 foot: [[
-                    { content: 'TOTAL PENGELUARAN', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: 'TOTAL PENGELUARAN', colSpan: 7, styles: { halign: 'right', fontStyle: 'bold' } },
                     { content: document.getElementById('history-total-cost').innerText, styles: { halign: 'right', fontStyle: 'bold' } },
                     ''
                 ]]
@@ -1435,47 +1647,64 @@
 
         window.downloadComparePDF = function() {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('portrait');
+            const doc = new jsPDF('landscape');
             const spName = document.getElementById('compare-sparepart-filter').value;
+            const merkName = document.getElementById('compare-merk-filter').value;
+            const typeName = document.getElementById('compare-type-filter').value;
             
             if (!spName) return alert('Silakan pilih sparepart terlebih dahulu.');
 
-            const currentStock = masterSpareparts
-                .filter(s => s.nama === spName)
-                .sort((a, b) => a.harga - b.harga);
+            // Use the same logic as comparePrices for consistency
+            const productGroups = {};
+            masterTransactions.filter(t => {
+                let match = (t.nama_sparepart === spName);
+                if (merkName && t.merk !== merkName) match = false;
+                if (typeName && t.type !== typeName) match = false;
+                return match;
+            }).forEach(t => {
+                const key = `${t.vendor}|${t.merk || '-'}|${t.type || '-'}|${t.kualitas || '-'}`;
+                if (!productGroups[key] || new Date(t.po_tgl) > new Date(productGroups[key].po_tgl)) {
+                    productGroups[key] = t;
+                }
+            });
+
+            const currentPrices = Object.values(productGroups).sort((a, b) => a.harga - b.harga);
+            const minPrice = currentPrices.length > 0 ? currentPrices[0].harga : 0;
             
             // Header
             doc.setFontSize(18);
-            doc.setTextColor(16, 185, 129); // Emerald 500
+            doc.setTextColor(16, 185, 129);
             doc.text('SN CARGO UMUM', 14, 20);
             
             doc.setFontSize(11);
             doc.setTextColor(100);
             doc.text('LAPORAN PERBANDINGAN HARGA SPAREPART', 14, 28);
-            doc.text(`Item: ${spName}`, 14, 35);
+            let filterText = `Item: ${spName}`;
+            if (merkName) filterText += ` | Merek: ${merkName}`;
+            if (typeName) filterText += ` | Tipe: ${typeName}`;
+            doc.text(filterText, 14, 35);
             doc.text(`Tanggal Cetak: ${new Date().toLocaleString('id-ID')}`, 14, 42);
 
-            const minPrice = currentStock.length > 0 ? currentStock[0].harga : 0;
-
-            const tableData = currentStock.map((s, index) => {
-                const diff = s.harga - minPrice;
+            const tableData = currentPrices.map((p, index) => {
+                const diff = (parseFloat(p.harga) || 0) - minPrice;
                 return [
-                    s.vendor,
-                    s.merk || '-',
-                    s.type || '-',
-                    s.kualitas,
-                    `Rp ${new Number(s.harga).toLocaleString('id-ID')}`,
-                    diff === 0 ? 'HARGA TERBAIK' : `+ Rp ${diff.toLocaleString('id-ID')}`
+                    p.vendor,
+                    p.merk || '-',
+                    p.type || '-',
+                    p.kualitas || '-',
+                    `Rp ${new Number(p.harga).toLocaleString('id-ID')}`,
+                    diff === 0 ? 'TERMURAH' : `+ Rp ${diff.toLocaleString('id-ID')}`,
+                    new Date(p.po_tgl).toLocaleDateString('id-ID')
                 ];
             });
 
             doc.autoTable({
                 startY: 50,
-                head: [['Vendor', 'Merk', 'Tipe', 'Kualitas', 'Harga Unit', 'Selisih']],
+                head: [['Vendor', 'Merek', 'Tipe', 'Kualitas', 'Harga Unit', 'Selisih', 'Tanggal']],
                 body: tableData,
                 theme: 'striped',
-                headStyles: { fillColor: [59, 130, 246] }, // Blue 500 for compare
-                styles: { fontSize: 9 },
+                headStyles: { fillColor: [59, 130, 246] },
+                styles: { fontSize: 8 },
                 columnStyles: {
                     4: { halign: 'right' }
                 }
@@ -1483,6 +1712,282 @@
 
             doc.save(`Perbandingan_${spName}_${new Date().getTime()}.pdf`);
         };
+
+        window.exportVendorXLS = function() {
+            if (vendors.length === 0) return alert('Tidak ada data vendor untuk diekspor.');
+            
+            let html = `
+                <table border="1">
+                    <thead>
+                        <tr>
+                            <th style="background-color: #1e293b; color: #ffffff; font-weight: bold;">Kode Vendor</th>
+                            <th style="background-color: #1e293b; color: #ffffff; font-weight: bold;">Nama Vendor</th>
+                            <th style="background-color: #1e293b; color: #ffffff; font-weight: bold;">PIC</th>
+                            <th style="background-color: #1e293b; color: #ffffff; font-weight: bold;">No. Telp</th>
+                            <th style="background-color: #1e293b; color: #ffffff; font-weight: bold;">Alamat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            vendors.forEach(v => {
+                html += `
+                    <tr>
+                        <td>${v.kode}</td>
+                        <td>${v.nama}</td>
+                        <td>${v.pic}</td>
+                        <td>${v.telp}</td>
+                        <td>${v.alamat}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+
+            const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Master_Vendor_${new Date().getTime()}.xls`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        window.exportVendorPDF = function() {
+            if (vendors.length === 0) return alert('Tidak ada data vendor untuk diekspor.');
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape');
+
+            doc.setFontSize(18);
+            doc.setTextColor(16, 185, 129);
+            doc.text('SN CARGO UMUM', 14, 20);
+            
+            doc.setFontSize(12);
+            doc.setTextColor(100);
+            doc.text('DATA MASTER VENDOR', 14, 28);
+            doc.setFontSize(10);
+            doc.text(`Tanggal Cetak: ${new Date().toLocaleString('id-ID')}`, 14, 34);
+
+            const tableData = vendors.map(v => [
+                v.kode,
+                v.nama,
+                v.pic,
+                v.telp,
+                v.alamat
+            ]);
+
+            doc.autoTable({
+                startY: 40,
+                head: [['Kode Vendor', 'Nama Vendor', 'PIC', 'No. Telp', 'Alamat']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [30, 41, 59] }, // Dark Slate
+                styles: { fontSize: 9, cellPadding: 3 },
+                columnStyles: {
+                    0: { cellWidth: 30 },
+                    1: { cellWidth: 50 },
+                    2: { cellWidth: 40 },
+                    3: { cellWidth: 40 }
+                }
+            });
+
+            doc.save(`Master_Vendor_${new Date().getTime()}.pdf`);
+        };
+
+        window.exportVendorCSV = function() {
+            if (vendors.length === 0) return alert('Tidak ada data vendor untuk diekspor.');
+            
+            let csv = 'Kode Vendor,Nama Vendor,PIC,No. Telp,Alamat\n';
+            
+            vendors.forEach(v => {
+                // Escape quotes and handle commas in values
+                const row = [
+                    `"${v.kode.replace(/"/g, '""')}"`,
+                    `"${v.nama.replace(/"/g, '""')}"`,
+                    `"${v.pic.replace(/"/g, '""')}"`,
+                    `"${v.telp.replace(/"/g, '""')}"`,
+                    `"${v.alamat.replace(/"/g, '""')}"`
+                ];
+                csv += row.join(',') + '\n';
+            });
+
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Master_Vendor_${new Date().getTime()}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        window.handleVendorImport = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    if (!content) return;
+                    const lines = content.replace(/^\ufeff/g, '').split(/\r\n|\n|\r/).filter(l => l.trim() !== "");
+                    if (lines.length === 0) { alert('File kosong.'); return; }
+                    let count = 0;
+                    lines.forEach((line) => {
+                        const sep = (line.split(';').length > line.split(',').length) ? ';' : ',';
+                        const parts = line.split(new RegExp(`${sep}(?=(?:(?:[^"]*"){2})*[^"]*$)`));
+                        const clean = (str) => (!str) ? "-" : str.trim().replace(/^"|"$/g, '').replace(/""/g, '"').trim();
+                        let vKode = clean(parts[0]);
+                        let vNama = clean(parts[1]);
+                        if (parts.length === 1 && vKode.includes(',')) {
+                            const subParts = vKode.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                            if (subParts.length >= 2) { vKode = clean(subParts[0]); vNama = clean(subParts[1]); parts[2]=subParts[2]; parts[3]=subParts[3]; parts[4]=subParts[4]; }
+                        }
+                        const lowKode = vKode.toLowerCase();
+                        if (vKode && vNama && !lowKode.includes('kode') && lowKode !== '') {
+                            const vendorData = { kode: vKode, nama: vNama, pic: clean(parts[2]), telp: clean(parts[3]), alamat: clean(parts[4]) };
+                            const fbKey = vKode.replace(/[\.\#\$\/\[\]\-\s]/g, '_');
+                            db.ref('vendors/' + fbKey).set(vendorData);
+                            count++;
+                        }
+                    });
+                    if (count > 0) alert(`Berhasil mengimport ${count} data vendor!`);
+                    else alert('Format data tidak dikenali.');
+                } catch (err) { alert('Terjadi kesalahan: ' + err.message); }
+                event.target.value = ''; 
+            };
+            reader.readAsText(file);
+        };
+
+        window.exportArmadaXLS = function() {
+            if (masterArmada.length === 0) return alert('Tidak ada data armada untuk diekspor.');
+            let html = '<table border="1"><thead><tr>' +
+                '<th style="background-color: #1e293b; color: #ffffff; font-weight: bold;">Kode Armada</th>' +
+                '<th style="background-color: #1e293b; color: #ffffff; font-weight: bold;">No. Polisi</th>' +
+                '<th style="background-color: #1e293b; color: #ffffff; font-weight: bold;">Jenis Armada</th>' +
+                '<th style="background-color: #1e293b; color: #ffffff; font-weight: bold;">Divisi</th>' +
+                '<th style="background-color: #1e293b; color: #ffffff; font-weight: bold;">Status</th>' +
+                '</tr></thead><tbody>';
+            masterArmada.forEach(a => {
+                html += `<tr><td>${a.kode}</td><td>${a.nopol}</td><td>${a.jenis}</td><td>${a.divisi || '-'}</td><td>${a.status}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `Master_Armada_${new Date().getTime()}.xls`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        };
+
+        window.exportArmadaPDF = function() {
+            if (masterArmada.length === 0) return alert('Tidak ada data armada untuk diekspor.');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('portrait');
+            doc.setFontSize(18); doc.setTextColor(16, 185, 129); doc.text('SN CARGO UMUM', 14, 20);
+            doc.setFontSize(12); doc.setTextColor(100); doc.text('DATA MASTER ARMADA', 14, 28);
+            doc.setFontSize(10); doc.text(`Tanggal Cetak: ${new Date().toLocaleString('id-ID')}`, 14, 34);
+            const tableData = masterArmada.map(a => [a.kode, a.nopol, a.jenis, a.divisi || '-', a.status]);
+            doc.autoTable({
+                startY: 40,
+                head: [['Kode', 'No. Polisi', 'Jenis', 'Divisi', 'Status']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [30, 41, 59] },
+                styles: { fontSize: 9, cellPadding: 3 }
+            });
+            doc.save(`Master_Armada_${new Date().getTime()}.pdf`);
+        };
+
+        window.exportArmadaCSV = function() {
+            if (masterArmada.length === 0) return alert('Tidak ada data armada untuk diekspor.');
+            let csv = 'Kode,No. Polisi,Jenis Armada,Divisi,Status\n';
+            masterArmada.forEach(a => {
+                const row = [
+                    `"${a.kode.replace(/"/g, '""')}"`,
+                    `"${a.nopol.replace(/"/g, '""')}"`,
+                    `"${a.jenis.replace(/"/g, '""')}"`,
+                    `"${(a.divisi || '-').replace(/"/g, '""')}"`,
+                    `"${a.status.replace(/"/g, '""')}"`
+                ];
+                csv += row.join(',') + '\n';
+            });
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `Master_Armada_${new Date().getTime()}.csv`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        };
+
+        window.handleArmadaImport = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    const lines = content.replace(/^\ufeff/g, '').split(/\r\n|\n|\r/).filter(l => l.trim() !== "");
+                    if (lines.length < 1) return;
+                    let count = 0;
+                    lines.forEach((line) => {
+                        const sep = (line.split(';').length > line.split(',').length) ? ';' : ',';
+                        const parts = line.split(new RegExp(`${sep}(?=(?:(?:[^"]*"){2})*[^"]*$)`));
+                        const clean = (str) => str ? str.trim().replace(/^"|"$/g, '').replace(/""/g, '"').trim() : "";
+                        let vKode = clean(parts[0]);
+                        let vNopol = clean(parts[1]);
+                        if (parts.length === 1 && vKode.includes(',')) {
+                            const subParts = vKode.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                            if (subParts.length >= 2) { vKode = clean(subParts[0]); vNopol = clean(subParts[1]); parts[2]=subParts[2]; parts[3]=subParts[3]; parts[4]=subParts[4]; }
+                        }
+                        const lowKode = vKode.toLowerCase();
+                        if (vKode && vNopol && !lowKode.includes('kode') && lowKode !== '') {
+                            const armadaData = { kode: vKode, nopol: vNopol.toUpperCase(), jenis: clean(parts[2]) || 'Tronton', divisi: clean(parts[3]) || '-', status: clean(parts[4]) || 'Aktif' };
+                            const fbKey = vKode.replace(/[\.\#\$\/\[\]\-\s]/g, '_');
+                            db.ref('armada/' + fbKey).set(armadaData);
+                            count++;
+                        }
+                    });
+                    if (count > 0) alert(`Berhasil mengimport ${count} data armada!`);
+                    else alert('Format data tidak valid.');
+                } catch (err) { alert('Error: ' + err.message); }
+                event.target.value = ''; 
+            };
+            reader.readAsText(file);
+        };
+
+        // Export Dropdown Logic
+        window.toggleExportDropdown = function(event) {
+            if (event) event.stopPropagation();
+            const menu = document.getElementById('export-dropdown-menu');
+            if (menu) {
+                menu.classList.toggle('hidden');
+            }
+        };
+
+        window.toggleArmadaExportDropdown = function(event) {
+            if (event) event.stopPropagation();
+            const menu = document.getElementById('armada-export-dropdown');
+            if (menu) {
+                menu.classList.toggle('hidden');
+            }
+        };
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            // Vendor Export Dropdown
+            const vMenu = document.getElementById('export-dropdown-menu');
+            if (vMenu && !vMenu.contains(event.target) && !event.target.closest('button[onclick*="toggleExportDropdown"]')) {
+                vMenu.classList.add('hidden');
+            }
+            // Armada Export Dropdown
+            const aMenu = document.getElementById('armada-export-dropdown');
+            if (aMenu && !aMenu.contains(event.target) && !event.target.closest('button[onclick*="toggleArmadaExportDropdown"]')) {
+                aMenu.classList.add('hidden');
+            }
+        });
 
         // Modal Functions
         window.openModal = function(type) {
@@ -1519,6 +2024,9 @@
                     vendorSelect.innerHTML = '<option value="">Pilih Vendor</option>' + 
                         vendors.map(v => `<option value="${v.nama}">${v.nama}</option>`).join('');
                 }
+                // Show extra fields for full data entry
+                const extraFields = document.getElementById('sparepart-extra-fields');
+                if (extraFields) extraFields.style.display = 'block';
             } else if (type === 'master-transaksi') {
                 const el = document.getElementById('t_kode');
                 if(el) el.value = 'TRS-' + (masterTransactions.length + 1);
@@ -1563,18 +2071,112 @@
             return parseFloat(string.replace(/\./g, '')) || 0;
         };
 
+        window.showAllDatalist = function(input) {
+            // Simpan nilai lama
+            input.oldValue = input.value;
+            // Kosongkan agar browser memunculkan semua opsi datalist
+            input.value = "";
+            // Trigger pengisian ulang list berdasarkan state saat ini
+            handleTrsAutoPrice();
+        };
+
+        window.restoreDatalistValue = function(input) {
+            // Beri waktu 200ms agar browser bisa mendeteksi klik pada dropdown
+            setTimeout(() => {
+                if (input.value === "" && input.oldValue) {
+                    input.value = input.oldValue;
+                    handleTrsAutoPrice();
+                }
+                input.oldValue = null;
+            }, 200);
+        };
+
         window.handleTrsAutoPrice = function() {
             const spName = document.getElementById('t_sparepart').value;
-            const vendorName = document.getElementById('t_vendor').value;
             const priceInput = document.getElementById('t_harga');
+            const qualitySelect = document.getElementById('t_kualitas');
+            const merkInput = document.getElementById('t_merk');
+            const typeInput = document.getElementById('t_type');
+            const vendorSelect = document.getElementById('t_vendor');
+            const kategoriSelect = document.getElementById('t_kategori');
+            const dateInfo = document.getElementById('t_last_price_date');
+            const priceList = document.getElementById('list-harga-history');
+            
+            // 1. Ensure vendors dropdown is populated
+            if (vendorSelect.options.length <= 1) {
+                const currentVendorValue = vendorSelect.value;
+                vendorSelect.innerHTML = '<option value="">Pilih Vendor</option>' + 
+                    vendors.map(v => `<option value="${v.nama}">${v.nama}</option>`).join('');
+                if (currentVendorValue) vendorSelect.value = currentVendorValue;
+            }
 
-            if (spName && vendorName) {
-                const sp = masterSpareparts.find(s => s.nama === spName && s.vendor === vendorName);
-                if (sp) {
-                    priceInput.value = sp.harga.toLocaleString('id-ID');
-                } else {
-                    priceInput.value = '';
+            if (dateInfo) dateInfo.innerText = ''; 
+            
+            if (!spName) {
+                if (document.getElementById('list-merk')) document.getElementById('list-merk').innerHTML = '';
+                if (document.getElementById('list-type')) document.getElementById('list-type').innerHTML = '';
+                if (priceList) priceList.innerHTML = '';
+                return;
+            }
+
+            // 2. Fetch History for current Sparepart
+            const allHistory = masterTransactions.filter(t => t.nama_sparepart === spName);
+
+            // 3. Update MEREK & TIPE Datalists
+            if (document.getElementById('list-merk')) {
+                const distinctMerks = [...new Set(allHistory.map(t => t.merk).filter(m => m))];
+                document.getElementById('list-merk').innerHTML = distinctMerks.map(m => `<option value="${m}">${m}</option>`).join('');
+            }
+            if (document.getElementById('list-type')) {
+                const distinctTypes = [...new Set(allHistory.map(t => t.type).filter(t => t))];
+                document.getElementById('list-type').innerHTML = distinctTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+            }
+
+            // 4. PRICE History Filtering - Relaxed logic to show list
+            // Use current value or 'oldValue' if currently focused
+            const curMerk = (merkInput.value || merkInput.oldValue || "").trim();
+            const curType = (typeInput.value || typeInput.oldValue || "").trim();
+            const curVendor = vendorSelect.value;
+            const curKategori = kategoriSelect.value;
+            const curKualitas = qualitySelect.value;
+
+            if (spName && curMerk && curVendor && curKategori && curKualitas) {
+                const matches = allHistory.filter(t => 
+                    t.merk === curMerk && 
+                    t.type === curType && 
+                    t.vendor === curVendor && 
+                    t.kategori === curKategori && 
+                    t.kualitas === curKualitas
+                );
+
+                if (priceList) {
+                    const priceOptions = [];
+                    const seenPrices = new Set();
+                    
+                    [...matches].sort((a,b) => new Date(b.po_tgl) - new Date(a.po_tgl)).forEach(t => {
+                        const val = (parseFloat(t.harga) || 0).toLocaleString('id-ID');
+                        if (!seenPrices.has(val)) {
+                            priceOptions.push(`<option value="${val}">Rp ${val} (${new Date(t.po_tgl).toLocaleDateString('id-ID')})</option>`);
+                            seenPrices.add(val);
+                        }
+                    });
+                    priceList.innerHTML = priceOptions.join('');
                 }
+
+                // 5. Auto-fill logic (ONLY if price field is empty and not just focused)
+                if (priceInput && priceInput.value === "" && !priceInput.oldValue && matches.length > 0) {
+                    const sorted = [...matches].sort((a,b) => new Date(b.po_tgl) - new Date(a.po_tgl));
+                    priceInput.value = (parseFloat(sorted[0].harga) || 0).toLocaleString('id-ID');
+                    if (dateInfo) dateInfo.innerText = `Terakhir: ${new Date(sorted[0].po_tgl).toLocaleDateString('id-ID')}`;
+                } else if (matches.length === 0) {
+                    // NEW COMBINATION: Clear the price field
+                    if (priceInput && !priceInput.value.includes('.') && !priceInput.oldValue) {
+                        priceInput.value = "";
+                    }
+                    if (dateInfo) dateInfo.innerText = "Data Baru (Kosong)";
+                }
+            } else {
+                if (priceList) priceList.innerHTML = '';
             }
         };
 
@@ -1585,8 +2187,25 @@
                 modal.classList.remove('flex');
                 document.body.classList.remove('overflow-hidden');
             }
+
+            if (type === 'view-activity') {
+                // Reset Activity View Filters
+                document.getElementById('view-activity-limit').value = "ALL";
+                document.getElementById('view-activity-filter-merk').innerHTML = '<option value="">Semua Merek</option>';
+                document.getElementById('view-activity-filter-type').innerHTML = '<option value="">Semua Tipe</option>';
+            }
+
             const form = document.getElementById('form-' + type);
-            if (form) form.reset();
+            if (form) {
+                form.reset();
+                // Reset disabled states and buttons for sparepart modal
+                if (type === 'master-sparepart') {
+                    const inputs = form.querySelectorAll('input, select, textarea');
+                    inputs.forEach(input => { if(input.id !== 's_kode') input.disabled = false; });
+                    const saveBtn = form.querySelector('button[type="submit"]');
+                    if(saveBtn) saveBtn.style.display = 'block';
+                }
+            }
             
             // Reset password field to hidden type
             if (type === 'master-users') {
@@ -1675,12 +2294,19 @@
             document.getElementById('t_nopol').value = t.nopol;
             document.getElementById('t_jenis').value = t.jenis;
             document.getElementById('t_sparepart').value = t.nama_sparepart || '';
+            
+            // Trigger logic to populate datalists and vendor list
+            handleTrsAutoPrice();
+            
+            document.getElementById('t_merk').value = t.merk || '';
+            document.getElementById('t_type').value = t.type || '';
             document.getElementById('t_po_no').value = t.po_no;
             document.getElementById('t_po_tgl').value = t.po_tgl;
             document.getElementById('t_vendor').value = t.vendor;
             document.getElementById('t_kategori').value = t.kategori;
+            document.getElementById('t_kualitas').value = t.kualitas || '';
             document.getElementById('t_harga').value = (parseFloat(t.harga) || 0).toLocaleString('id-ID');
-            document.getElementById('t_divisi').value = t.divisi;
+            document.getElementById('t_jumlah').value = t.jumlah || 1;
             document.getElementById('t_keterangan').value = t.keterangan;
             document.querySelector('#modal-master-transaksi h3').innerText = 'Edit Transaksi';
         };
@@ -1699,6 +2325,177 @@
             document.querySelector('#modal-master-users h3').innerText = 'Edit User';
         };
 
+        let currentViewActivityData = { type: '', id: '' };
+
+        window.showMasterActivity = function(type, id) {
+            currentViewActivityData = { type, id };
+            openModal('view-activity');
+            
+            // Show filter UI
+            document.getElementById('view-activity-filters').classList.remove('hidden');
+            const spFilters = document.getElementById('sparepart-specific-filters');
+            if (type === 'sparepart') {
+                spFilters.classList.remove('hidden');
+            } else {
+                spFilters.classList.add('hidden');
+            }
+
+            refreshActivityTable();
+        };
+
+        window.refreshActivityTable = function() {
+            const { type, id } = currentViewActivityData;
+            const titleEl = document.getElementById('view-activity-title');
+            const headerEl = document.getElementById('view-activity-header-info');
+            const tbody = document.getElementById('view-activity-table-body');
+            const totalEl = document.getElementById('view-activity-total');
+            const limit = document.getElementById('view-activity-limit').value;
+            const filterMerk = document.getElementById('view-activity-filter-merk').value;
+            const filterType = document.getElementById('view-activity-filter-type').value;
+
+            // Reset table head to default
+            document.getElementById('view-activity-table-head').innerHTML = `
+                <tr>
+                    <th class="px-4 py-3">Tanggal</th>
+                    <th class="px-4 py-3">No. PO-MO</th>
+                    <th class="px-4 py-3">Detail</th>
+                    <th class="px-4 py-3 text-right">Nilai</th>
+                </tr>
+            `;
+
+            let filteredTrs = [];
+            let headerHtml = "";
+
+            if (type === 'vendor') {
+                const v = vendors.find(x => x.kode === id);
+                titleEl.innerText = `Aktivitas Vendor: ${v.nama}`;
+                headerHtml = `
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">PIC</p>
+                        <p class="text-sm font-bold text-slate-700">${v.pic}</p>
+                    </div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">Telp</p>
+                        <p class="text-sm font-bold text-slate-700">${v.telp}</p>
+                    </div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl shadow-sm col-span-2">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">Alamat</p>
+                        <p class="text-xs font-medium text-slate-600 truncate">${v.alamat}</p>
+                    </div>
+                `;
+                filteredTrs = masterTransactions.filter(t => t.vendor === v.nama);
+            } else if (type === 'armada') {
+                const a = masterArmada.find(x => x.kode === id);
+                titleEl.innerText = `Aktivitas Armada: ${a.nopol}`;
+                headerHtml = `
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">Jenis</p>
+                        <p class="text-sm font-bold text-slate-700">${a.jenis}</p>
+                    </div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">Divisi</p>
+                        <p class="text-sm font-bold text-slate-700">${a.divisi || '-'}</p>
+                    </div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">Status</p>
+                        <p class="text-xs font-bold text-emerald-600">${a.status}</p>
+                    </div>
+                `;
+                filteredTrs = masterTransactions.filter(t => t.nopol === a.nopol);
+            } else if (type === 'sparepart') {
+                const s = masterSpareparts.find(x => x.kode === id);
+                titleEl.innerText = `Aktivitas Sparepart: ${s.nama}`;
+                headerHtml = `
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl shadow-sm col-span-4">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">Nama Sparepart</p>
+                        <p class="text-sm font-bold text-slate-700">${s.nama}</p>
+                    </div>
+                `;
+                
+                // Get base data for filters
+                const baseTrs = masterTransactions.filter(t => t.nama_sparepart === s.nama);
+                
+                // Populate Filter Options if they are empty (first run)
+                const merkSelect = document.getElementById('view-activity-filter-merk');
+                const typeSelect = document.getElementById('view-activity-filter-type');
+                if (merkSelect.options.length <= 1) {
+                    const merks = [...new Set(baseTrs.map(t => t.merk).filter(m => m))];
+                    merkSelect.innerHTML = '<option value="">Semua Merek</option>' + merks.map(m => `<option value="${m}">${m}</option>`).join('');
+                    const types = [...new Set(baseTrs.map(t => t.type).filter(t => t))];
+                    typeSelect.innerHTML = '<option value="">Semua Tipe</option>' + types.map(t => `<option value="${t}">${t}</option>`).join('');
+                }
+
+                // Apply Filters
+                filteredTrs = baseTrs.filter(t => {
+                    if (filterMerk && t.merk !== filterMerk) return false;
+                    if (filterType && t.type !== filterType) return false;
+                    return true;
+                });
+                
+                // Update table head
+                document.getElementById('view-activity-table-head').innerHTML = `
+                    <tr>
+                        <th class="px-4 py-3">Tanggal</th>
+                        <th class="px-4 py-3">Nopol</th>
+                        <th class="px-4 py-3">Merek / Tipe</th>
+                        <th class="px-4 py-3 text-center">Jumlah</th>
+                        <th class="px-4 py-3 text-right">Harga</th>
+                        <th class="px-4 py-3 text-right">Total</th>
+                    </tr>
+                `;
+            }
+
+            headerEl.innerHTML = headerHtml;
+            
+            // Sort by date descending
+            filteredTrs.sort((a,b) => new Date(b.po_tgl) - new Date(a.po_tgl));
+
+            // Apply Limit
+            let displayTrs = filteredTrs;
+            if (limit !== 'ALL') {
+                displayTrs = filteredTrs.slice(0, parseInt(limit));
+            }
+
+            let total = 0;
+            tbody.innerHTML = displayTrs.length > 0 ? displayTrs.map(t => {
+                const itemPrice = parseFloat(t.harga) || 0;
+                const itemQty = parseInt(t.jumlah) || 1;
+                const rowTotal = itemPrice * itemQty;
+                total += rowTotal;
+                
+                if (type === 'sparepart') {
+                    return `
+                        <tr>
+                            <td class="px-4 py-3 text-slate-500">${new Date(t.po_tgl).toLocaleDateString('id-ID')}</td>
+                            <td class="px-4 py-3 font-bold text-slate-700">${t.nopol}</td>
+                            <td class="px-4 py-3">
+                                <p class="font-semibold text-slate-800 text-[10px]">${t.merk || '-'}</p>
+                                <p class="text-[9px] text-slate-400 uppercase">${t.type || '-'}</p>
+                            </td>
+                            <td class="px-4 py-3 text-center font-bold text-slate-600">${itemQty}</td>
+                            <td class="px-4 py-3 text-right font-mono text-slate-500">Rp ${itemPrice.toLocaleString('id-ID')}</td>
+                            <td class="px-4 py-3 text-right font-mono font-bold text-emerald-600">Rp ${rowTotal.toLocaleString('id-ID')}</td>
+                        </tr>
+                    `;
+                }
+
+                const detail = type === 'vendor' ? t.nopol : t.nama_sparepart;
+                return `
+                    <tr>
+                        <td class="px-4 py-3 text-slate-500">${new Date(t.po_tgl).toLocaleDateString('id-ID')}</td>
+                        <td class="px-4 py-3 font-bold text-slate-700">${t.po_no}</td>
+                        <td class="px-4 py-3">
+                            <p class="font-semibold text-slate-800">${detail}</p>
+                            <p class="text-[10px] text-slate-400 uppercase">${t.vendor}</p>
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono font-bold text-emerald-600">Rp ${itemPrice.toLocaleString('id-ID')}</td>
+                    </tr>
+                `;
+            }).join('') : `<tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">Belum ada riwayat transaksi untuk data ini.</td></tr>`;
+            
+            totalEl.innerText = `Rp ${total.toLocaleString('id-ID')}`;
+        };
+
         // Render Functions
         function renderMasterUsers() {
             const tbody = document.getElementById('master-users-table-body');
@@ -1715,7 +2512,7 @@
                             ${u.role === 'admin' ? 'Administrator' : 'User Laporan'}
                         </span>
                     </td>
-                    <td class="px-6 py-3 text-right flex justify-end gap-2">
+                    <td class="write-op px-6 py-3 text-right flex justify-end gap-2">
                         <button onclick="editUser('${u.username}')" class="text-blue-400 hover:text-blue-600 transition-colors p-1"><i class="fa-solid fa-user-pen"></i></button>
                         ${u.username !== currentUser.username ? `<button onclick="deleteData('user', '${u.username}')" class="text-red-400 hover:text-red-600 transition-colors p-1"><i class="fa-solid fa-trash-can"></i></button>` : ''}
                     </td>
@@ -1735,8 +2532,11 @@
                     <td class="px-6 py-3">${v.telp}</td>
                     <td class="px-6 py-3 text-slate-500 max-w-xs truncate">${v.alamat}</td>
                     <td class="px-6 py-3 text-right flex justify-end gap-2">
-                        <button onclick="editVendor('${v.kode}')" class="text-blue-400 hover:text-blue-600 transition-colors p-1"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="deleteData('vendor', '${v.kode}')" class="text-red-400 hover:text-red-600 transition-colors p-1"><i class="fa-solid fa-trash-can"></i></button>
+                        <button onclick="showMasterActivity('vendor', '${v.kode}')" class="text-emerald-500 hover:text-emerald-700 transition-colors p-1" title="Lihat Aktivitas"><i class="fa-solid fa-eye"></i></button>
+                        <div class="write-op flex gap-2">
+                            <button onclick="editVendor('${v.kode}')" class="text-blue-400 hover:text-blue-600 transition-colors p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteData('vendor', '${v.kode}')" class="text-red-400 hover:text-red-600 transition-colors p-1"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
                     </td>
                 </tr>
             `).join('');
@@ -1769,8 +2569,11 @@
                             </span>
                         </td>
                         <td class="px-6 py-3 text-right flex justify-end gap-2">
-                            <button onclick="editArmada('${a.kode}')" class="text-blue-400 hover:text-blue-600 transition-colors p-1"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button onclick="deleteData('armada', '${a.kode}')" class="text-red-400 hover:text-red-600 transition-colors p-1"><i class="fa-solid fa-trash-can"></i></button>
+                            <button onclick="showMasterActivity('armada', '${a.kode}')" class="text-emerald-500 hover:text-emerald-700 transition-colors p-1" title="Lihat Aktivitas"><i class="fa-solid fa-eye"></i></button>
+                            <div class="write-op flex gap-2">
+                                <button onclick="editArmada('${a.kode}')" class="text-blue-400 hover:text-blue-600 transition-colors p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button onclick="deleteData('armada', '${a.kode}')" class="text-red-400 hover:text-red-600 transition-colors p-1"><i class="fa-solid fa-trash-can"></i></button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -1799,24 +2602,18 @@
             const tbody = document.getElementById('master-sparepart-table-body');
             if (!tbody) return;
             const search = document.getElementById('search-sparepart') ? document.getElementById('search-sparepart').value.toLowerCase() : '';
-            const filtered = masterSpareparts.filter(s => s.kode.toLowerCase().includes(search) || s.nama.toLowerCase().includes(search) || (s.merk && s.merk.toLowerCase().includes(search)) || s.vendor.toLowerCase().includes(search) || s.type.toLowerCase().includes(search));
+            const filtered = masterSpareparts.filter(s => s.kode.toLowerCase().includes(search) || s.nama.toLowerCase().includes(search));
             
             tbody.innerHTML = filtered.map(s => `
                 <tr class="hover:bg-slate-50 transition-colors text-xs">
                     <td class="px-6 py-3 font-bold text-slate-800">${s.kode}</td>
                     <td class="px-6 py-3 font-medium">${s.nama}</td>
-                    <td class="px-6 py-3 text-slate-500">${s.merk || '-'}</td>
-                    <td class="px-6 py-3 font-semibold text-slate-600">${s.vendor}</td>
-                    <td class="px-6 py-3">${s.type}</td>
-                    <td class="px-6 py-3">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600 uppercase border border-blue-100">${s.kualitas}</span>
-                    </td>
-                    <td class="px-6 py-3 text-right font-mono font-bold text-emerald-600">
-                        Rp ${new Number(s.harga).toLocaleString('id-ID')}
-                    </td>
-                    <td class="px-6 py-3 text-right flex justify-end gap-2">
-                        <button onclick="editSparepart('${s.kode}')" class="text-blue-400 hover:text-blue-600 transition-colors p-1"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="deleteData('sparepart', '${s.kode}')" class="text-red-400 hover:text-red-600 transition-colors p-1"><i class="fa-solid fa-trash-can"></i></button>
+                    <td class="px-6 py-3 text-right flex justify-end gap-2 text-base">
+                        <button onclick="showMasterActivity('sparepart', '${s.kode}')" class="text-emerald-500 hover:text-emerald-700 transition-colors p-1" title="Lihat Aktivitas"><i class="fa-solid fa-eye"></i></button>
+                        <div class="write-op flex gap-2">
+                            <button onclick="editSparepart('${s.kode}')" class="text-blue-400 hover:text-blue-600 transition-colors p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteData('sparepart', '${s.kode}')" class="text-red-400 hover:text-red-600 transition-colors p-1"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
                     </td>
                 </tr>
             `).join('');
@@ -1828,7 +2625,9 @@
             const search = document.getElementById('search-transaksi') ? document.getElementById('search-transaksi').value.toLowerCase() : '';
             const filtered = masterTransactions.filter(t => t.kode.toLowerCase().includes(search) || t.nopol.toLowerCase().includes(search) || (t.nama_sparepart && t.nama_sparepart.toLowerCase().includes(search)) || t.po_no.toLowerCase().includes(search) || t.vendor.toLowerCase().includes(search));
             
-            tbody.innerHTML = filtered.map(t => `
+            tbody.innerHTML = filtered.map(t => {
+                const totalRow = (parseFloat(t.harga) || 0) * (parseInt(t.jumlah) || 1);
+                return `
                 <tr class="hover:bg-slate-50 transition-colors text-xs">
                     <td class="px-6 py-3 font-bold text-slate-800">${t.kode}</td>
                     <td class="px-6 py-3">
@@ -1840,19 +2639,23 @@
                     <td class="px-6 py-3 text-slate-500">${new Date(t.po_tgl).toLocaleDateString('id-ID')}</td>
                     <td class="px-6 py-3 font-semibold text-slate-700">${t.vendor}</td>
                     <td class="px-6 py-3">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${t.kategori === 'Toko' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'} uppercase">
-                            ${t.kategori}
-                        </span>
+                        <div class="flex flex-col gap-1">
+                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${t.kategori === 'Toko' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'} uppercase text-center w-fit">
+                                ${t.kategori}
+                            </span>
+                            <span class="text-[9px] text-slate-400 italic">${t.kualitas || '-'}</span>
+                        </div>
                     </td>
+                    <td class="px-6 py-3 text-center font-bold text-slate-600">${t.jumlah || 1}</td>
                     <td class="px-6 py-3 text-right font-mono font-bold text-emerald-600">
-                        Rp ${new Number(t.harga).toLocaleString('id-ID')}
+                        Rp ${totalRow.toLocaleString('id-ID')}
                     </td>
-                    <td class="px-6 py-3 text-right flex justify-end gap-2">
+                    <td class="write-op px-6 py-3 text-right flex justify-end gap-2">
                         <button onclick="editTransaksi('${t.kode}')" class="text-blue-400 hover:text-blue-600 transition-colors p-1"><i class="fa-solid fa-pen-to-square"></i></button>
                         <button onclick="deleteData('transaksi', '${t.kode}')" class="text-red-400 hover:text-red-600 transition-colors p-1"><i class="fa-solid fa-trash-can"></i></button>
                     </td>
                 </tr>
-            `).join('');
+            `;}).join('');
         }
 
         // Form Handlers
@@ -1896,38 +2699,16 @@
             e.preventDefault();
             const kode = document.getElementById('s_kode').value;
             const nama = document.getElementById('s_nama').value;
-            const vendor = document.getElementById('s_vendor').value;
-            const baruHarga = parseCurrencyValue(document.getElementById('s_harga').value);
             
-            const existing = masterSpareparts.find(s => s.kode === kode);
-            
-            if (existing && existing.harga != baruHarga) {
-                const logRef = db.ref('priceChangeLogs').push();
-                logRef.set({
-                    waktu: new Date().toISOString(),
-                    kode: kode,
-                    nama: nama,
-                    vendor: vendor,
-                    lama: parseFloat(existing.harga),
-                    baru: baruHarga
-                });
-            }
-
             const sparepartData = {
                 kode: kode,
-                nama: nama,
-                vendor: vendor,
-                merk: document.getElementById('s_merk').value,
-                type: document.getElementById('s_type').value,
-                kualitas: document.getElementById('s_kualitas').value,
-                harga: baruHarga,
-                keterangan: document.getElementById('s_keterangan').value
+                nama: nama
             };
 
             db.ref('spareparts/' + kode.replace('-', '_')).set(sparepartData)
                 .then(() => {
                     closeModal('master-sparepart');
-                    alert('Data Sparepart berhasil disinkronkan!');
+                    alert('Master Sparepart berhasil disimpan!');
                 });
         });
 
@@ -1936,15 +2717,18 @@
             const kode = document.getElementById('t_kode').value;
             const newTransaction = {
                 kode: kode,
+                po_no: document.getElementById('t_po_no').value,
+                po_tgl: document.getElementById('t_po_tgl').value,
                 nopol: document.getElementById('t_nopol').value,
                 jenis: document.getElementById('t_jenis').value,
                 nama_sparepart: document.getElementById('t_sparepart').value,
-                po_no: document.getElementById('t_po_no').value,
-                po_tgl: document.getElementById('t_po_tgl').value,
+                merk: document.getElementById('t_merk').value,
+                type: document.getElementById('t_type').value,
                 vendor: document.getElementById('t_vendor').value,
                 kategori: document.getElementById('t_kategori').value,
+                kualitas: document.getElementById('t_kualitas').value,
                 harga: parseCurrencyValue(document.getElementById('t_harga').value),
-                divisi: document.getElementById('t_divisi').value,
+                jumlah: parseInt(document.getElementById('t_jumlah').value) || 1,
                 keterangan: document.getElementById('t_keterangan').value
             };
 
