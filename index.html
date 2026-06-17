@@ -574,7 +574,9 @@
                                             <th class="px-6 py-4">No. PO-MO</th>
                                             <th class="px-6 py-4">Vendor</th>
                                             <th class="px-6 py-4">Kategori</th>
+                                            <th class="px-6 py-4 text-center">Jumlah</th>
                                             <th class="px-6 py-4 text-right">Harga</th>
+                                            <th class="px-6 py-4 text-right">Total</th>
                                             <th class="px-6 py-4">Keterangan</th>
                                         </tr>
                                     </thead>
@@ -583,7 +585,7 @@
                                     </tbody>
                                     <tfoot class="bg-slate-50/50">
                                         <tr class="font-bold">
-                                            <td colspan="7" class="px-6 py-4 text-right text-slate-500 text-xs uppercase">Total Pengeluaran:</td>
+                                            <td colspan="9" class="px-6 py-4 text-right text-slate-500 text-xs uppercase">Total Pengeluaran:</td>
                                             <td class="px-6 py-4 text-right text-emerald-600 text-lg" id="history-total-cost">Rp 0</td>
                                             <td></td>
                                         </tr>
@@ -1572,7 +1574,10 @@
 
             let totalCost = 0;
             tbody.innerHTML = filteredData.map(t => {
-                totalCost += (parseFloat(t.harga) || 0) * (parseInt(t.jumlah) || 1);
+                const harga = parseFloat(t.harga) || 0;
+                const jumlah = parseInt(t.jumlah) || 1;
+                const totalRow = harga * jumlah;
+                totalCost += totalRow;
                 
                 const merek = t.merk || '-';
                 const tipe = t.type || '-';
@@ -1590,8 +1595,12 @@
                                 ${t.kategori}
                             </span>
                         </td>
+                        <td class="px-6 py-4 text-center font-bold text-slate-600 text-[10px]">${jumlah}</td>
+                        <td class="px-6 py-4 text-right font-mono text-slate-500 text-[10px]">
+                            Rp ${harga.toLocaleString('id-ID')}
+                        </td>
                         <td class="px-6 py-4 text-right font-mono font-bold text-emerald-600 text-[10px]">
-                            Rp ${(parseFloat(t.harga) || 0).toLocaleString('id-ID')}
+                            Rp ${totalRow.toLocaleString('id-ID')}
                         </td>
                         <td class="px-6 py-4 text-slate-500 text-[10px] truncate max-w-[150px]">${t.keterangan || '-'}</td>
                     </tr>
@@ -1599,7 +1608,7 @@
             }).join('');
 
             if (filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="px-6 py-12 text-center text-slate-400">Belum ada data transaksi untuk armada ini.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="11" class="px-6 py-12 text-center text-slate-400">Belum ada data transaksi untuk armada ini.</td></tr>`;
             }
 
             document.getElementById('history-total-cost').innerText = `Rp ${totalCost.toLocaleString('id-ID')}`;
@@ -1626,6 +1635,9 @@
             doc.text(`Tanggal Cetak: ${new Date().toLocaleString('id-ID')}`, 14, 42);
 
             const tableData = filteredData.map(t => {
+                const harga = parseFloat(t.harga) || 0;
+                const jumlah = parseInt(t.jumlah) || 1;
+                const totalRow = harga * jumlah;
                 return [
                     new Date(t.po_tgl).toLocaleDateString('id-ID'),
                     t.nama_sparepart || '-',
@@ -1634,23 +1646,27 @@
                     t.po_no,
                     t.vendor,
                     t.kategori,
-                    `Rp ${ (parseFloat(t.harga) || 0).toLocaleString('id-ID')}`,
+                    jumlah,
+                    `Rp ${harga.toLocaleString('id-ID')}`,
+                    `Rp ${totalRow.toLocaleString('id-ID')}`,
                     t.keterangan || '-'
                 ];
             });
 
             doc.autoTable({
                 startY: 50,
-                head: [['Tanggal', 'Sparepart', 'Merek', 'Tipe', 'No. PO-MO', 'Vendor', 'Kategori', 'Harga', 'Keterangan']],
+                head: [['Tanggal', 'Sparepart', 'Merek', 'Tipe', 'No. PO-MO', 'Vendor', 'Kategori', 'Jumlah', 'Harga', 'Total', 'Keterangan']],
                 body: tableData,
                 theme: 'striped',
                 headStyles: { fillColor: [16, 185, 129] },
-                styles: { fontSize: 8 },
+                styles: { fontSize: 7 },
                 columnStyles: {
-                    7: { halign: 'right' }
+                    7: { halign: 'center' },
+                    8: { halign: 'right' },
+                    9: { halign: 'right' }
                 },
                 foot: [[
-                    { content: 'TOTAL PENGELUARAN', colSpan: 7, styles: { halign: 'right', fontStyle: 'bold' } },
+                    { content: 'TOTAL PENGELUARAN', colSpan: 9, styles: { halign: 'right', fontStyle: 'bold' } },
                     { content: document.getElementById('history-total-cost').innerText, styles: { halign: 'right', fontStyle: 'bold' } },
                     ''
                 ]]
@@ -2517,21 +2533,33 @@
             const search = document.getElementById('search-users') ? document.getElementById('search-users').value.toLowerCase() : '';
             const filtered = masterUsers.filter(u => u.username.toLowerCase().includes(search) || u.name.toLowerCase().includes(search) || u.role.toLowerCase().includes(search));
             
-            tbody.innerHTML = filtered.map(u => `
+            tbody.innerHTML = filtered.map(u => {
+                let roleLabel = 'User Laporan';
+                let roleClass = 'bg-blue-100 text-blue-700';
+                
+                if (u.role === 'admin') {
+                    roleLabel = 'Administrator';
+                    roleClass = 'bg-purple-100 text-purple-700';
+                } else if (u.role === 'tamu') {
+                    roleLabel = 'Tamu';
+                    roleClass = 'bg-slate-100 text-slate-600';
+                }
+
+                return `
                 <tr class="hover:bg-slate-50 transition-colors text-xs">
                     <td class="px-6 py-3 font-bold text-slate-800">${u.username}</td>
                     <td class="px-6 py-3 font-medium">${u.name}</td>
                     <td class="px-6 py-3">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'} uppercase">
-                            ${u.role === 'admin' ? 'Administrator' : 'User Laporan'}
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${roleClass} uppercase">
+                            ${roleLabel}
                         </span>
                     </td>
-                    <td class="write-op px-6 py-3 text-right flex justify-end gap-2">
-                        <button onclick="editUser('${u.username}')" class="text-blue-400 hover:text-blue-600 transition-colors p-1"><i class="fa-solid fa-user-pen"></i></button>
-                        ${u.username !== currentUser.username ? `<button onclick="deleteData('user', '${u.username}')" class="text-red-400 hover:text-red-600 transition-colors p-1"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+                    <td class="write-op px-6 py-3 text-right flex justify-end gap-2 text-base">
+                        <button onclick="editUser('${u.username}')" class="text-blue-400 hover:text-blue-600 transition-colors p-1" title="Edit"><i class="fa-solid fa-user-pen"></i></button>
+                        ${u.username !== currentUser.username ? `<button onclick="deleteData('user', '${u.username}')" class="text-red-400 hover:text-red-600 transition-colors p-1" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>` : ''}
                     </td>
                 </tr>
-            `).join('');
+            `;}).join('');
         }
         function renderVendors() {
             const tbody = document.getElementById('vendor-table-body');
