@@ -465,6 +465,30 @@
                                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                                     <input type="text" id="search-sparepart" oninput="renderMasterSparepart()" class="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
                                 </div>
+                                <div class="flex gap-2">
+                                    <!-- Dropdown Ekspor Sparepart -->
+                                    <div class="relative">
+                                        <button onclick="toggleSparepartExportDropdown(event)" class="h-full px-4 py-2 bg-slate-50 text-slate-600 border border-slate-200 font-bold rounded-xl hover:bg-slate-100 transition-all text-xs flex items-center gap-2">
+                                            <i class="fa-solid fa-file-export"></i> Ekspor <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                                        </button>
+                                        <div id="sparepart-export-dropdown" class="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl hidden z-[70] overflow-hidden">
+                                            <button onclick="exportSparepartXLS(); toggleSparepartExportDropdown(event)" class="w-full text-left px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors flex items-center gap-2 border-b border-slate-50">
+                                                <i class="fa-solid fa-file-excel text-blue-500 text-sm"></i> Format Excel (.xls)
+                                            </button>
+                                            <button onclick="exportSparepartPDF(); toggleSparepartExportDropdown(event)" class="w-full text-left px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors flex items-center gap-2 border-b border-slate-50">
+                                                <i class="fa-solid fa-file-pdf text-red-500 text-sm"></i> Format PDF (.pdf)
+                                            </button>
+                                            <button onclick="exportSparepartCSV(); toggleSparepartExportDropdown(event)" class="w-full text-left px-4 py-3 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors flex items-center gap-2">
+                                                <i class="fa-solid fa-file-csv text-orange-500 text-sm"></i> Format CSV (.csv)
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="h-8 w-[1px] bg-slate-200 mx-1 self-center hidden sm:block"></div>
+                                    <input type="file" id="import-sparepart-input" class="hidden" accept=".csv" onchange="handleSparepartImport(event)">
+                                    <button onclick="document.getElementById('import-sparepart-input').click()" class="write-op px-4 py-2 bg-amber-50 text-amber-600 border border-amber-100 font-bold rounded-xl hover:bg-amber-600 hover:text-white transition-all text-xs flex items-center gap-2">
+                                        <i class="fa-solid fa-file-import"></i> Import (.csv)
+                                    </button>
+                                </div>
                                 <button onclick="openModal('master-sparepart')" class="write-op px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 shrink-0">
                                     <i class="fa-solid fa-plus"></i> Tambah Sparepart
                                 </button>
@@ -1980,13 +2004,105 @@
                             count++;
                         }
                     });
-                    if (count > 0) alert(`Berhasil mengimport ${count} data armada!`);
-                    else alert('Format data tidak valid.');
-                } catch (err) { alert('Error: ' + err.message); }
-                event.target.value = ''; 
+                        if (count > 0) alert(`Berhasil mengimport ${count} data armada!`);
+                        else alert('Format data tidak valid.');
+                    } catch (err) { alert('Error: ' + err.message); }
+                    event.target.value = ''; 
+                };
+                reader.readAsText(file);
             };
-            reader.readAsText(file);
-        };
+
+            window.exportSparepartXLS = function() {
+                if (masterSpareparts.length === 0) return alert('Tidak ada data sparepart untuk diekspor.');
+                let html = '<table border="1"><thead><tr>' +
+                    '<th style="background-color: #1e293b; color: #ffffff; font-weight: bold;">Kode Sparepart</th>' +
+                    '<th style="background-color: #1e293b; color: #ffffff; font-weight: bold;">Nama Sparepart</th>' +
+                    '</tr></thead><tbody>';
+                masterSpareparts.forEach(s => {
+                    html += `<tr><td>${s.kode}</td><td>${s.nama}</td></tr>`;
+                });
+                html += '</tbody></table>';
+                const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `Master_Sparepart_${new Date().getTime()}.xls`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            };
+
+            window.exportSparepartPDF = function() {
+                if (masterSpareparts.length === 0) return alert('Tidak ada data sparepart untuk diekspor.');
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('portrait');
+                doc.setFontSize(18); doc.setTextColor(16, 185, 129); doc.text('SN CARGO UMUM', 14, 20);
+                doc.setFontSize(12); doc.setTextColor(100); doc.text('DATA MASTER SPAREPART', 14, 28);
+                doc.setFontSize(10); doc.text(`Tanggal Cetak: ${new Date().toLocaleString('id-ID')}`, 14, 34);
+                const tableData = masterSpareparts.map(s => [s.kode, s.nama]);
+                doc.autoTable({
+                    startY: 40,
+                    head: [['Kode', 'Nama Sparepart']],
+                    body: tableData,
+                    theme: 'grid',
+                    headStyles: { fillColor: [30, 41, 59] },
+                    styles: { fontSize: 10, cellPadding: 4 }
+                });
+                doc.save(`Master_Sparepart_${new Date().getTime()}.pdf`);
+            };
+
+            window.exportSparepartCSV = function() {
+                if (masterSpareparts.length === 0) return alert('Tidak ada data sparepart untuk diekspor.');
+                let csv = 'Kode,Nama Sparepart\n';
+                masterSpareparts.forEach(s => {
+                    const row = [
+                        `"${s.kode.replace(/"/g, '""')}"`,
+                        `"${s.nama.replace(/"/g, '""')}"`
+                    ];
+                    csv += row.join(',') + '\n';
+                });
+                const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `Master_Sparepart_${new Date().getTime()}.csv`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            };
+
+            window.handleSparepartImport = function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const content = e.target.result;
+                        const lines = content.replace(/^\ufeff/g, '').split(/\r\n|\n|\r/).filter(l => l.trim() !== "");
+                        if (lines.length < 1) return;
+                        let count = 0;
+                        lines.forEach((line) => {
+                            const sep = (line.split(';').length > line.split(',').length) ? ';' : ',';
+                            const parts = line.split(new RegExp(`${sep}(?=(?:(?:[^"]*"){2})*[^"]*$)`));
+                            const clean = (str) => str ? str.trim().replace(/^"|"$/g, '').replace(/""/g, '"').trim() : "";
+                            let vKode = clean(parts[0]);
+                            let vNama = clean(parts[1]);
+                            
+                            // Check if the first column was actually the whole line (Excel A1 issue)
+                            if (parts.length === 1 && vKode.includes(',')) {
+                                const subParts = vKode.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                                if (subParts.length >= 2) { vKode = clean(subParts[0]); vNama = clean(subParts[1]); }
+                            }
+
+                            const lowKode = vKode.toLowerCase();
+                            if (vKode && vNama && !lowKode.includes('kode') && lowKode !== '') {
+                                const sparepartData = { kode: vKode, nama: vNama };
+                                const fbKey = vKode.replace(/[\.\#\$\/\[\]\-\s]/g, '_');
+                                db.ref('spareparts/' + fbKey).set(sparepartData);
+                                count++;
+                            }
+                        });
+                        if (count > 0) alert(`Berhasil mengimport ${count} data sparepart!`);
+                        else alert('Format data tidak valid.');
+                    } catch (err) { alert('Error: ' + err.message); }
+                    event.target.value = ''; 
+                };
+                reader.readAsText(file);
+            };
 
         // Export Dropdown Logic
         window.toggleExportDropdown = function(event) {
@@ -2005,6 +2121,14 @@
             }
         };
 
+        window.toggleSparepartExportDropdown = function(event) {
+            if (event) event.stopPropagation();
+            const menu = document.getElementById('sparepart-export-dropdown');
+            if (menu) {
+                menu.classList.toggle('hidden');
+            }
+        };
+
         // Close dropdown when clicking outside
         document.addEventListener('click', function(event) {
             // Vendor Export Dropdown
@@ -2016,6 +2140,11 @@
             const aMenu = document.getElementById('armada-export-dropdown');
             if (aMenu && !aMenu.contains(event.target) && !event.target.closest('button[onclick*="toggleArmadaExportDropdown"]')) {
                 aMenu.classList.add('hidden');
+            }
+            // Sparepart Export Dropdown
+            const sMenu = document.getElementById('sparepart-export-dropdown');
+            if (sMenu && !sMenu.contains(event.target) && !event.target.closest('button[onclick*="toggleSparepartExportDropdown"]')) {
+                sMenu.classList.add('hidden');
             }
         });
 
