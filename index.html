@@ -2578,7 +2578,9 @@
                     <th class="px-4 py-3">Tanggal</th>
                     <th class="px-4 py-3">No. PO-MO</th>
                     <th class="px-4 py-3">Detail</th>
-                    <th class="px-4 py-3 text-right">Nilai</th>
+                    <th class="px-4 py-3 text-center">Jumlah</th>
+                    <th class="px-4 py-3 text-right">Harga</th>
+                    <th class="px-4 py-3 text-right">Total</th>
                 </tr>
             `;
 
@@ -2603,6 +2605,18 @@
                     </div>
                 `;
                 filteredTrs = masterTransactions.filter(t => t.vendor === v.nama);
+
+                // Update table head for vendor view specifically
+                document.getElementById('view-activity-table-head').innerHTML = `
+                    <tr>
+                        <th class="px-4 py-3">Tanggal</th>
+                        <th class="px-4 py-3">No. PO-MO</th>
+                        <th class="px-4 py-3">Detail</th>
+                        <th class="px-4 py-3 text-center">Jumlah Barang</th>
+                        <th class="px-4 py-3 text-right">Harga</th>
+                        <th class="px-4 py-3 text-right">Total</th>
+                    </tr>
+                `;
             } else if (type === 'armada') {
                 const a = masterArmada.find(x => x.kode === id);
                 titleEl.innerText = `Aktivitas Armada: ${a.nopol}`;
@@ -2698,7 +2712,23 @@
                     `;
                 }
 
-                const detail = type === 'vendor' ? t.nopol : t.nama_sparepart;
+                if (type === 'vendor') {
+                    return `
+                        <tr>
+                            <td class="px-4 py-3 text-slate-500">${new Date(t.po_tgl).toLocaleDateString('id-ID')}</td>
+                            <td class="px-4 py-3 font-bold text-slate-700">${t.po_no}</td>
+                            <td class="px-4 py-3">
+                                <p class="font-semibold text-slate-800">${t.nopol}</p>
+                                <p class="text-[10px] text-indigo-600 font-bold uppercase">${t.nama_sparepart || '-'}</p>
+                            </td>
+                            <td class="px-4 py-3 text-center font-bold text-slate-600">${itemQty}</td>
+                            <td class="px-4 py-3 text-right font-mono text-slate-500">Rp ${itemPrice.toLocaleString('id-ID')}</td>
+                            <td class="px-4 py-3 text-right font-mono font-bold text-emerald-600">Rp ${rowTotal.toLocaleString('id-ID')}</td>
+                        </tr>
+                    `;
+                }
+
+                const detail = t.nama_sparepart;
                 return `
                     <tr>
                         <td class="px-4 py-3 text-slate-500">${new Date(t.po_tgl).toLocaleDateString('id-ID')}</td>
@@ -2707,7 +2737,9 @@
                             <p class="font-semibold text-slate-800">${detail}</p>
                             <p class="text-[10px] text-slate-400 uppercase">${t.vendor}</p>
                         </td>
-                        <td class="px-4 py-3 text-right font-mono font-bold text-emerald-600">Rp ${itemPrice.toLocaleString('id-ID')}</td>
+                        <td class="px-4 py-3 text-center font-bold text-slate-600">${itemQty}</td>
+                        <td class="px-4 py-3 text-right font-mono text-slate-500">Rp ${itemPrice.toLocaleString('id-ID')}</td>
+                        <td class="px-4 py-3 text-right font-mono font-bold text-emerald-600">Rp ${rowTotal.toLocaleString('id-ID')}</td>
                     </tr>
                 `;
             }).join('') : `<tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">Belum ada riwayat transaksi untuk data ini.</td></tr>`;
